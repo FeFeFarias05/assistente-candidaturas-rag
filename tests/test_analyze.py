@@ -159,6 +159,10 @@ def test_slug_vazio():
     assert analyze.slug(None) == "vaga" and analyze.slug("!!!") == "vaga"
 
 
+def test_slug_preserva_letras_acentuadas():
+    assert analyze.slug("Agência Fictícia | Desenvolvedor(a) Júnior") == "agencia-ficticia-desenvolvedor-a-junior"
+
+
 def test_trava_de_privacidade(tmp_path, monkeypatch):
     (tmp_path / "a.txt").write_text("segredo pessoal", encoding="utf-8")
     monkeypatch.setenv("MATERIAL_DIR", str(tmp_path))

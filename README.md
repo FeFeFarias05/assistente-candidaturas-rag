@@ -83,6 +83,7 @@ O que a avaliação ensinou:
 ## Limites
 
 - 7 vagas, um modelo (`gpt-5.4-mini`), um perfil fictício pequeno. Não comparei com um modelo maior.
+- O LLM varia entre execuções: a mesma vaga pode classificar um item como ponto forte numa rodada e como lacuna na outra (visto em teste). Os números da avaliação são de uma execução, não uma média.
 - A validação pega invenção de **tecnologia** e citação falsa, mas não pega toda inflação semântica (ex.: tratar "projeto em dupla" como "trabalho com designers"). O texto precisa de revisão humana.
 - Só PDF com texto selecionável (sem OCR) e só tecnologias de uma palavra são conferidas no trecho citado (termos como "web development" dariam falso alarme).
 - Interface só no terminal.

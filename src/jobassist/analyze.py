@@ -1,6 +1,7 @@
 """Vaga + material -> relatório de aderência, com validação das citações."""
 import json
 import re
+import unicodedata
 from datetime import date
 from pathlib import Path
 
@@ -108,7 +109,8 @@ def analyze_rag(job: dict, index, lang: str | None = None):
 # ---------- relatório ----------
 
 def slug(text: str | None) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", (text or "vaga").lower()).strip("-")[:40] or "vaga"
+    ascii_text = unicodedata.normalize("NFKD", text or "vaga").encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", "-", ascii_text.lower()).strip("-")[:40] or "vaga"
 
 
 def save_report(job: dict, body: str, mode: str, warnings: list[str] = (), folder: Path = ROOT / "reports") -> Path:
