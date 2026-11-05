@@ -161,6 +161,10 @@ Poucos e úteis, sem framework além do `pytest`:
 | Busca só por similaridade | Busca híbrida: bônus para termo de tecnologia citado literalmente | O MiniLM é fraco com nomes soltos ("JavaScript" = 0,24). |
 | Temperatura 0 na extração | Sem `temperature`; JSON Schema estrito | Modelos GPT-5 só aceitam a temperatura padrão. |
 | Validação: citações e tecnologias; erro = 1 nova tentativa só para citações | Nova tentativa também para tecnologia sem suporte e item contraditório | A avaliação (Dia 6) mostrou invenção que passava pela validação só como aviso. |
+| Validação só avisa quando o modelo não corrige | Item sem suporte é movido de Pontos fortes para Lacunas pelo código (`demote`) | O modelo varia entre execuções; só o aviso deixava a afirmação falsa no relatório. |
+| Busca híbrida só para tecnologia | Também: versão nos dois lados (HTML5 ≈ HTML) e tabela de idiomas (English ≈ Inglês) | Falsas lacunas achadas ao testar com um currículo real. |
+| "Não indexar dados sensíveis" (risco da spec, sem implementação) | Remoção de linhas com endereço, nascimento, telefone, CPF e e-mail em `material.py` | Foi encontrado no currículo real que isso não estava implementado. |
+| Vagas em `data/private/vagas/` | Vagas em `data/vagas/` | Dentro de `data/private/` elas seriam lidas como material pessoal. |
 | `openai`, `fastembed`, `pypdf`, `numpy`, `python-dotenv` | Mesmas dependências (numpy vem com o fastembed); versões fixadas no Dia 7 | — |
 
 Medidas e justificativas em [avaliacao.md](avaliacao.md).

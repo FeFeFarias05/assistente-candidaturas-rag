@@ -1,7 +1,7 @@
-# Avaliação (Dia 6)
+# Avaliação (Dia 6, atualizada depois de testar com um currículo real)
 
 Como rodar: `python eval/run_eval.py` (usa a API de verdade, sempre com o material fictício `data/sample`).
-Dados brutos: [eval/results.md](../eval/results.md) (rodada final) e [eval/results_rodada1.md](../eval/results_rodada1.md) (antes das correções).
+Dados brutos: [eval/results.md](../eval/results.md) (rodada 3, a final) e [eval/results_rodada1.md](../eval/results_rodada1.md) (rodada 1, antes das correções).
 
 ## Método
 - 7 vagas de teste em `eval/jobs/` (5 em português, 2 em inglês). Cada uma foi desenhada contra o perfil fictício: duas casam bem (05, 07), três quase não casam (02, 03, 04) e duas casam em parte (01, 06).
@@ -10,28 +10,30 @@ Dados brutos: [eval/results.md](../eval/results.md) (rodada final) e [eval/resul
 - Métricas automáticas: isca que foi para **Lacunas**; tecnologia ausente afirmada como **ponto forte**; citação inexistente; avisos da validação.
 - Relevância da busca: nota 0 a 2 por requisito (ver abaixo).
 
-## Resultados: antes e depois das correções
+## Três rodadas
 
-| | Rodada 1 | Rodada 2 (final) |
-|---|---|---|
-| Sem RAG: ausentes afirmados como forte | 0 | 0 |
-| **RAG: ausentes afirmados como forte** | **5** (GraphQL, C#, ASP.NET, SQL Server, AWS) | **0** |
-| Citações inexistentes (sem RAG / RAG) | 0 / 0 | 0 / 0 |
-| Iscas em Lacunas (sem RAG / RAG) | 18/18 / 17/18 | 17/18 / 17/18 |
-| Relatórios com avisos (sem RAG / RAG) | 1/7 / 6/7 | 0/7 / 2/7 |
+| | Rodada 1 | Rodada 2 | Rodada 3 (final) |
+|---|---|---|---|
+| O que mudou | versão inicial | validação com nova tentativa para tecnologia sem suporte; prompt mais estrito | busca por versão e idioma; **a validação move para Lacunas** o que o modelo não corrige |
+| Sem RAG: ausentes afirmados como forte | 0 | 0 | 0 |
+| **RAG: ausentes afirmados como forte** | **5** | **0** | **1** (SQL Server, ver abaixo) |
+| Citações inexistentes (sem RAG / RAG) | 0 / 0 | 0 / 0 | 0 / 0 |
+| Iscas em Lacunas (sem RAG / RAG) | 18/18 / 17/18 | 17/18 / 17/18 | 17/18 / 17/18 |
+| Relatórios com aviso (sem RAG / RAG) | 1/7 / 6/7 | 0/7 / 2/7 | 0/7 / 2/7 |
 
-**O que a rodada 1 mostrou.** O RAG inventou mais que o modo sem RAG. Dois casos eram invenção de fato, com citação real apontando para um trecho que não dizia aquilo: "AWS: a candidata lista AWS no perfil" e "GraphQL: tem projeto com GraphQL". Uma validação que só confere se o id existe não pega isso; a checagem do termo no trecho citado pegou, mas só avisava.
+**Rodada 1.** O RAG inventou mais que o modo sem RAG. Dois casos eram invenção de fato, com citação real apontando para um trecho que não dizia aquilo: "AWS: a candidata lista AWS no perfil" e "GraphQL: tem projeto com GraphQL". Conferir só se o id da citação existe não pega isso; a checagem do termo no trecho citado pegou, mas só avisava.
 
-**O que mudou na rodada 2:**
-1. Tecnologia sem suporte no trecho citado e item contraditório passaram a disparar uma nova tentativa (antes era só aviso).
-2. O casamento de termos tolera sufixo de versão (HTML casa com HTML5), o que eliminou um falso alarme.
-3. O prompt ganhou duas regras: os trechos do mapa foram achados por similaridade e podem ser irrelevantes; tecnologias são específicas (SQL não é SQL Server, Python não é C#).
+**Rodada 2.** Tecnologia sem suporte e item contraditório passaram a disparar uma nova tentativa. O casamento de termos tolerou sufixo de versão (HTML ≈ HTML5). O prompt ganhou regras: os trechos do mapa foram achados por similaridade e podem ser irrelevantes; tecnologias são específicas (SQL não é SQL Server).
 
-Resultado final: **0 invenções** nos dois modos, **0 citações inexistentes**.
+**Entre as rodadas 2 e 3** testei com um currículo real e achei falsas lacunas (HTML5 sem trecho mesmo com "HTML" no currículo; "English" sem trecho mesmo com "Inglês"). Corrigi a busca. Numa execução intermediária o RAG voltou a afirmar "AWS" como ponto forte: **o modelo varia entre execuções**, e a nova tentativa não bastou.
 
-**Sobre a isca "perdida" (17/18).** É a `.NET` da vaga 03 ("Full Stack .NET"). Os dois modos cobrem o assunto no relatório com "C# e ASP.NET Core", e a métrica procurava o texto `.NET` solto. Não é uma falha do modelo, e mantive o número como saiu em vez de ajustar a métrica depois de ver o resultado.
+**Rodada 3.** Se depois da nova tentativa ainda sobrar, o código move o item de Pontos fortes para Lacunas e registra isso nos avisos. Resultado: nenhuma tecnologia de uma palavra ausente chega aos Pontos fortes.
 
-**Avisos que restaram (2 no RAG).** O modelo colocou em Pontos fortes um item que ele mesmo escreveu como "sem evidência" (ex.: "Docker: não usou Docker; sem evidência"). A validação não esconde: o aviso aparece no topo do relatório, e quem revisa vê.
+**O caso que sobrou (1 no RAG): "SQL Server" na vaga 03.** O item diz "Escrever consultas em SQL Server: a candidata escreveu consultas em SQL" e infla SQL para SQL Server. A validação só confere tecnologias de uma palavra (termos como "web development" dariam falso alarme), então não pega. É um limite conhecido e agora tem um exemplo concreto.
+
+**Sobre a isca "perdida" (17/18).** É a `.NET` da vaga 03 ("Full Stack .NET"). Os dois modos cobrem o assunto com "C# e ASP.NET Core", e a métrica procurava o texto `.NET` solto. Não é falha do modelo, e mantive o número como saiu em vez de ajustar a métrica depois de ver o resultado.
+
+**Efeito colateral e correção.** Na vaga 04 o RAG escreveu 8 itens "sem evidência" dentro de Pontos fortes; ao movê-los, Lacunas ficou duplicada (10 → 21 itens). Depois dessa rodada, o código passou a não duplicar lacuna que já existe. **Não rodei a avaliação de novo** depois dessa correção, então `eval/results.md` ainda mostra os 21.
 
 ## Relevância da busca (nota 0 a 2)
 
@@ -43,21 +45,21 @@ Resultado final: **0 invenções** nos dois modos, **0 citações inexistentes**
 | Vaga | Requisitos | Média |
 |---|---|---|
 | 01 backend Python | 13 | 1,77 |
-| 02 React pleno | 6 | 1,33 |
+| 02 React pleno | 6 | 1,67 |
 | 03 full stack .NET | 12 | 1,42 |
 | 04 DevOps | 11 | 1,45 |
 | 05 front-end | 12 | 1,83 |
 | 06 analista de dados | 10 | 1,30 |
-| 07 estágio web | 12 | 1,75 |
-| **Total** | **76** | **1,58** (meta: ≥ 1,5) |
+| 07 estágio web | 12 | 1,92 |
+| **Total** | **76** | **1,63** (meta: ≥ 1,5) |
 
-**Onde a busca erra (13 notas 0 em 76):**
-- **11 casos: lixo para requisito que o perfil não tem.** Para "C#", "Azure", "AWS", "GraphQL" ou "Excel", a busca devolve o trecho "menos diferente" (similaridade 0,30 a 0,54) em vez de nada. O limiar fixo não separa bem o que existe do que não existe.
-- **2 casos: evidência que existe e passou despercebida.** "Fluent English" e "Good written English" voltaram sem trechos, embora o currículo diga "Inglês B2" e "escrevo e-mails profissionais". Frases genéricas sobre soft skills são o ponto fraco do modelo de embeddings pequeno.
+As notas da rodada 1 eram 1,58 no total. Subiram porque a busca de idioma passou a achar "Inglês B2" para "Fluent English" e "Good written English" (os dois únicos zeros por evidência perdida). Só reavaliei os requisitos que mudaram.
 
-**Por que mantive o limiar em 0,30.** Subir para ~0,45 cortaria boa parte do lixo, mas também evidências reais com nota baixa (Flask 0,30; PostgreSQL 0,39). Um falso "sem evidência" tira do relatório algo que a candidata tem, e é mais difícil de notar que um trecho irrelevante. Como o LLM e a validação filtram o lixo (0 invenções no final), preferi manter a revocação.
+**Onde a busca ainda erra (11 notas 0 em 76):** todas são lixo para requisito que o perfil não tem. Para "C#", "Azure", "AWS", "GraphQL" ou "Excel", a busca devolve o trecho "menos diferente" (similaridade 0,30 a 0,54) em vez de nada. O limiar fixo não separa bem o que existe do que não existe.
+
+**Por que mantive o limiar em 0,30.** Subir para ~0,45 cortaria boa parte do lixo, mas também evidências reais com nota baixa (Flask 0,30; PostgreSQL 0,39). Um falso "sem evidência" tira do relatório algo que a candidata tem, e é mais difícil de notar que um trecho irrelevante. Como o LLM e a validação filtram o lixo, preferi manter a revocação.
 
 ## Conclusões (RAG × sem RAG, CA10)
-- **Qualidade:** com o material pequeno deste teste (4 arquivos), os dois modos chegaram ao mesmo resultado final. **Não há ganho de qualidade medido a favor do RAG.** Na rodada 1 ele foi pior, e só igualou depois das correções.
+- **Qualidade:** com o material pequeno deste teste (4 arquivos), o modo sem RAG ficou igual ou melhor em todas as rodadas. O RAG chegou perto só depois de duas correções de validação. **Não há ganho de qualidade medido a favor do RAG.**
 - **Onde o RAG deve compensar** (não medido aqui): material grande demais para caber no prompt, custo por chamada e privacidade, já que só os trechos recuperados saem da máquina, em vez do material inteiro.
-- **Limites desta avaliação:** 7 vagas, um modelo, um perfil fictício pequeno, relevância avaliada por mim. A comparação com um modelo maior (previsto no plano) não foi feita.
+- **Limites desta avaliação:** 7 vagas, um modelo, um perfil fictício pequeno, relevância avaliada por mim, cada número é de uma execução (o modelo varia). A comparação com um modelo maior, prevista no plano, não foi feita.

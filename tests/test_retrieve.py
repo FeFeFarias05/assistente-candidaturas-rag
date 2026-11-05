@@ -59,6 +59,24 @@ def test_termo_literal_respeita_limite_de_palavra(monkeypatch):
     assert rt.retrieve([req("C#")], index)[0][0].hits  # símbolo especial não quebra o regex
 
 
+def test_idioma_casa_entre_ingles_e_portugues(monkeypatch):
+    index = (IDS, ["Idiomas: Português (nativo), Inglês (B2)", "bolo", "outro"], MATRIX)
+    monkeypatch.setattr(rt, "embed", fake_embed({"Advanced level of English": [0.1, 0.1, 0.1],
+                                                  "Fluent Spanish": [0.1, 0.1, 0.1]}))
+    soft = lambda t: {"text": t, "kind": "soft", "required": False}
+    res, _ = rt.retrieve([soft("Advanced level of English"), soft("Fluent Spanish")], index)
+    assert [h.id for h in res[0].hits] == ["a#c1"]  # "English" achou "Inglês"
+    assert res[1].hits == []  # espanhol não está no material
+
+
+def test_versao_nos_dois_lados():
+    p = rt.term_pattern
+    assert p("HTML5").search("Skills: HTML, CSS") and p("HTML").search("usa HTML5")
+    assert p("CSS3").search("CSS e Bootstrap") and p("Python3").search("Python")
+    assert not p("Java").search("JavaScript") and not p("S3").search("S")  # S3 mantém o número
+    assert p("S3").search("AWS S3") and p("C#").search("sei C# bem")
+
+
 def test_indice_vazio_ou_sem_requisitos():
     res, unique = rt.retrieve([req("x")], None)
     assert res[0].hits == [] and unique == []

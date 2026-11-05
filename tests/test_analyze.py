@@ -100,14 +100,56 @@ def test_retry_tambem_corrige_tecnologia_inventada(monkeypatch):
     assert "C#: citada em Pontos fortes" in seen[1]
 
 
+def test_se_o_modelo_nao_corrige_o_codigo_move_o_item_para_lacunas(monkeypatch):
+    inventado = ("## Pontos fortes\n- Python: usa Python [cv.pdf#p1]\n"
+                 "- C#: domina C# [cv.pdf#p1]\n- Docker: sem evidência no material\n"
+                 "## Lacunas\n- web development: sem evidência\n")
+    seen = fake_llm(monkeypatch, inventado, inventado)  # o retry repete o erro
+    body, warnings = analyze.analyze_no_rag(JOB, SEGS)
+    forte = analyze._section(body, "Pontos fortes")
+    assert "Python" in forte and "C#" not in forte and "Docker" not in forte
+    lac = analyze._section(body, "Lacunas")
+    assert "C#: sem suporte no trecho citado" in lac and "web development" in lac  # lacuna original preservada
+    assert any("moveu de Pontos fortes para Lacunas: C#, Docker" in w for w in warnings)
+    assert not any("citada em Pontos fortes" in w for w in warnings)  # nada inventado sobrou
+    assert len(seen) == 2
+
+
+def test_demote_nao_duplica_lacuna_ja_existente():
+    body = ("## Pontos fortes\n- C#: domina C# [cv.pdf#p1]\n- Python [cv.pdf#p1]\n"
+            "## Lacunas\n- C#: não há evidência de C#\n")
+    novo, notas = analyze.demote(body, JOB, {"cv.pdf#p1": "Python"})
+    assert novo.count("C#:") == 1 and "domina" not in novo  # a lacuna original fica, o forte falso sai
+    assert "já estavam em Lacunas" in notas[0]
+
+
+def test_demote_sem_secao_lacunas_cria_a_secao():
+    body = "## Pontos fortes\n- C#: domina C# [cv.pdf#p1]\n"
+    novo, notas = analyze.demote(body, JOB, {"cv.pdf#p1": "Python"})
+    assert "## Lacunas" in novo and "C#: sem suporte" in novo and notas
+
+
+def test_demote_nao_mexe_em_relatorio_bom():
+    assert analyze.demote(BOM, JOB, {"cv.pdf#p1": "Python e Flask"}) == (BOM, [])
+
+
 def test_html_casa_com_html5():
     job = {**JOB, "requirements": [{"text": "HTML", "kind": "tech", "required": True}]}
     body = "## Pontos fortes\n- HTML: mantém páginas [cv.pdf#p1]\n## Lacunas\n- x"
     assert analyze.unsupported_techs(body, job, {"cv.pdf#p1": "Usa HTML5 e CSS3"}) == []
 
 
-def test_se_persistir_vira_aviso(monkeypatch):
+def test_ponto_forte_com_citacao_inexistente_e_movido_para_lacunas(monkeypatch):
     ruim = BOM.replace("[cv.pdf#p1]", "[fantasma.pdf#p1]")
+    fake_llm(monkeypatch, ruim, ruim)
+    body, warnings = analyze.analyze_no_rag(JOB, SEGS)
+    assert "Python" not in analyze._section(body, "Pontos fortes") and "fantasma" not in body
+    assert any("moveu de Pontos fortes para Lacunas: Python" in w for w in warnings)
+
+
+def test_se_persistir_vira_aviso(monkeypatch):
+    # citação falsa fora de Pontos fortes: a validação não move, só avisa
+    ruim = BOM + "## O que destacar no currículo\n- Algo [fantasma.pdf#p1]\n"
     fake_llm(monkeypatch, ruim, ruim)
     _, warnings = analyze.analyze_no_rag(JOB, SEGS)
     assert "citação inexistente: [fantasma.pdf#p1]" in warnings

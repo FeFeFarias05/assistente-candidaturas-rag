@@ -18,3 +18,5 @@ __pycache__/
 *.egg-info/
 .cache/
 eval/out/
+data/vagas/*
+!data/vagas/.gitkeep

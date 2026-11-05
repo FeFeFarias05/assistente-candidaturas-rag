@@ -48,22 +48,45 @@ def unsupported_techs(body: str, job: dict, texts: dict[str, str]) -> list[str]:
 
     ponytail: só tecnologias de uma palavra; termos genéricos ("web development") dariam falso alarme.
     """
+    return sorted({f"{t}: citada em Pontos fortes sem aparecer no trecho citado"
+                   for item in _strength_items(body) for t in _unsupported_in(item, job, texts)})
+
+
+def _strength_items(body: str) -> list[str]:
+    return [i for i in re.split(r"\n(?=\s*[-*]\s)", _section(body, "Pontos fortes")) if i.strip()]
+
+
+def _unsupported_in(item: str, job: dict, texts: dict[str, str]) -> list[str]:
     techs = [r["text"] for r in job["requirements"] if r["kind"] == "tech" and " " not in r["text"].strip()]
-    out = []
-    for item in re.split(r"\n(?=\s*[-*]\s)", _section(body, "Pontos fortes")):
-        cited = CITATION.findall(item)
-        cited_text = " ".join(texts.get(c, "") for c in cited)
-        for t in techs:
-            word = term_pattern(t)
-            if word.search(CITATION.sub("", item)) and not word.search(cited_text):
-                out.append(f"{t}: citada em Pontos fortes sem aparecer no trecho citado")
-    return sorted(set(out))
+    cited_text = " ".join(texts.get(c, "") for c in CITATION.findall(item))
+    return [t for t in techs if term_pattern(t).search(CITATION.sub("", item)) and not term_pattern(t).search(cited_text)]
 
 
 def strengths_saying_no_evidence(body: str) -> list[str]:
     """Item em 'Pontos fortes' que admite 'sem evidência': contradição, deveria estar em Lacunas."""
-    items = re.split(r"\n(?=\s*[-*]\s)", _section(body, "Pontos fortes"))
-    return [f"Pontos fortes contém item sem evidência: {i.strip()[:60]}" for i in items if "sem evidência" in i.lower()]
+    return [f"Pontos fortes contém item sem evidência: {i.strip()[:60]}"
+            for i in _strength_items(body) if "sem evidência" in i.lower()]
+
+
+def demote(body: str, job: dict, texts: dict[str, str]) -> tuple[str, list[str]]:
+    """Garantia final: item de Pontos fortes com tecnologia sem suporte no trecho citado, ou que admite
+    'sem evidência', sai de lá e vai para Lacunas. Devolve (texto novo, notas para o relatório)."""
+    bad = [i for i in _strength_items(body) if _unsupported_in(i, job, texts) or "sem evidência" in i.lower()]
+    if not bad:
+        return body, []
+    titles = [i.strip().lstrip("-* ").split(":")[0].strip() for i in bad]
+    for i in bad:
+        body = body.replace(i, "", 1)
+    existing = _section(body, "Lacunas").casefold()  # não duplica lacuna que o modelo já escreveu
+    moved = "".join(f"- {t}: sem suporte no trecho citado (item movido de Pontos fortes pela validação)\n"
+                    for t in titles if t.casefold() not in existing)
+    if not moved:
+        return body, [f"a validação removeu de Pontos fortes (já estavam em Lacunas): {', '.join(titles)}"]
+    if re.search(r"^##\s*Lacunas\s*$", body, re.MULTILINE):
+        body = re.sub(r"(^##\s*Lacunas\s*$\n)", lambda m: m.group(1) + moved, body, count=1, flags=re.MULTILINE)
+    else:
+        body += f"\n\n## Lacunas\n{moved}"
+    return body, [f"a validação moveu de Pontos fortes para Lacunas: {', '.join(titles)}"]
 
 
 def problems(body: str, job: dict, texts: dict[str, str]) -> list[str]:
@@ -83,8 +106,8 @@ def generate(job: dict, items, lang: str, evidence=None) -> tuple[str, list[str]
                "Item de Pontos fortes que o trecho citado não sustenta por completo deve ir para Lacunas "
                "(ou ser removido). Não afirme tecnologia que não está escrita no trecho citado.")
         body = complete(fix, system=PROMPT)
-        found = problems(body, job, texts)
-    return body, found
+    body, notes = demote(body, job, texts)  # o que o modelo não corrigiu, o código tira de Pontos fortes
+    return body, problems(body, job, texts) + notes
 
 
 # ---------- modos ----------

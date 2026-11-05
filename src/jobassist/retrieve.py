@@ -7,14 +7,20 @@ import numpy as np
 from .embed import embed
 
 LITERAL_BONUS = 0.5
+LANGUAGES = [("english", "inglês", "ingles"), ("spanish", "espanhol"), ("portuguese", "português", "portugues"),
+             ("french", "francês", "frances"), ("german", "alemão", "alemao")]
 TOP_K = 3
 THRESHOLD = 0.30  # nota mínima de cosseno; calibrada na avaliação (Dia 6)
 MAX_TOTAL = 12
 
 
 def term_pattern(term: str) -> re.Pattern:
-    """Termo como palavra inteira, tolerando sufixo de versão (HTML casa com HTML5; Java não casa com JavaScript)."""
-    return re.compile(rf"(?<!\w){re.escape(term.strip())}\d*(?!\w)", re.IGNORECASE)
+    """Termo como palavra inteira, tolerando versão dos dois lados (HTML5 casa com HTML e vice-versa;
+    Java não casa com JavaScript). Número final só é descartado se sobrar base de 3+ letras (S3 fica S3)."""
+    term = term.strip()
+    base = re.sub(r"\d+$", "", term)
+    base = base if len(base) >= 3 else term
+    return re.compile(rf"(?<!\w){re.escape(base)}\d*(?!\w)", re.IGNORECASE)
 
 
 @dataclass
@@ -45,9 +51,13 @@ def retrieve(requirements: list[dict], index, top_k: int = TOP_K, threshold: flo
     # Híbrido: embeddings são fracos com nomes de tecnologia soltos ("JavaScript" = 0,24 num
     # currículo que o cita). Trecho que contém o termo literalmente ganha bônus no ranking.
     for k, r in enumerate(requirements):
-        if r["kind"] == "tech":
-            word = term_pattern(r["text"])
-            sims[k] += LITERAL_BONUS * np.array([bool(word.search(t)) for t in texts])
+        patterns = [term_pattern(r["text"])] if r["kind"] == "tech" else []
+        # Idiomas: o modelo não liga "English" a "Inglês" (vaga em um idioma, currículo em outro).
+        for group in LANGUAGES:
+            if any(term_pattern(a).search(r["text"]) for a in group):
+                patterns += [term_pattern(a) for a in group]
+        if patterns:
+            sims[k] += LITERAL_BONUS * np.array([any(p.search(t) for p in patterns) for t in texts])
 
     per_req = []
     best: dict[int, float] = {}
