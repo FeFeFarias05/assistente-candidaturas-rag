@@ -6,6 +6,7 @@ from pathlib import Path
 from .analyze import analyze_no_rag, save_report
 from .config import load_config
 from .extract import extract_job
+from .ingest import ingest
 from .material import load_material
 
 SAMPLE = Path("data/sample")
@@ -25,12 +26,21 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--no-rag", action="store_true", help="envia o material inteiro no prompt (linha de base)")
     a.add_argument("--lang", choices=["pt", "en"], help="idioma do rascunho (padrão: o da vaga)")
     a.add_argument("--yes-send-all", action="store_true", help="confirma enviar TODO o material à API")
+    i = sub.add_parser("ingest", help="indexa o material (embeddings) para a busca")
+    i.add_argument("--rebuild", action="store_true", help="refaz o índice do zero (ex.: ao trocar de provedor)")
     return p
 
 
 def main(argv=None):
     p = build_parser()
     args = p.parse_args(argv)
+
+    if args.cmd == "ingest":
+        folder = load_config().material_dir
+        stats = ingest(folder, rebuild=args.rebuild)
+        print(f"[ingest] {folder}: {stats['novos']} arquivo(s) indexado(s), "
+              f"{stats['inalterados']} inalterado(s), {stats['removidos']} removido(s)")
+        return
 
     if args.cmd == "extract":
         print(json.dumps(extract_job(read_job(args.vaga)), ensure_ascii=False, indent=2))
