@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jobassist"
+version = "0.1.0"
+description = "Assistente de candidaturas com LLM e RAG"
+requires-python = ">=3.10"
+dependencies = ["openai", "python-dotenv", "pypdf"]
+
+[project.scripts]
+jobassist = "jobassist.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
