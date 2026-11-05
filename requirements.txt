@@ -1,0 +1,5 @@
+openai
+python-dotenv
+pypdf
+pytest
+# fastembed entra no Dia 3, quando houver embeddings

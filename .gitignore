@@ -1,0 +1,17 @@
+# Segredos
+.env
+
+# Material pessoal real (a pasta existe, o conteúdo não vai para o Git)
+data/private/*
+!data/private/.gitkeep
+
+# Gerados localmente
+*.db
+reports/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
