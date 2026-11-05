@@ -12,6 +12,11 @@ THRESHOLD = 0.30  # nota mínima de cosseno; calibrada na avaliação (Dia 6)
 MAX_TOTAL = 12
 
 
+def term_pattern(term: str) -> re.Pattern:
+    """Termo como palavra inteira, tolerando sufixo de versão (HTML casa com HTML5; Java não casa com JavaScript)."""
+    return re.compile(rf"(?<!\w){re.escape(term.strip())}\d*(?!\w)", re.IGNORECASE)
+
+
 @dataclass
 class Hit:
     id: str
@@ -41,7 +46,7 @@ def retrieve(requirements: list[dict], index, top_k: int = TOP_K, threshold: flo
     # currículo que o cita). Trecho que contém o termo literalmente ganha bônus no ranking.
     for k, r in enumerate(requirements):
         if r["kind"] == "tech":
-            word = re.compile(rf"(?<!\w){re.escape(r['text'])}(?!\w)", re.IGNORECASE)
+            word = term_pattern(r["text"])
             sims[k] += LITERAL_BONUS * np.array([bool(word.search(t)) for t in texts])
 
     per_req = []

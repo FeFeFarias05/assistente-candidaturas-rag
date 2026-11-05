@@ -1,0 +1,21 @@
+Desenvolvedor(a) Backend Python Júnior | Loja Fictícia Tech
+
+Buscamos uma pessoa desenvolvedora backend júnior para integrar o time de plataforma.
+
+Responsabilidades:
+- Desenvolver e manter APIs REST em Python.
+- Escrever testes automatizados para novas funcionalidades.
+- Modelar tabelas e escrever consultas SQL.
+- Participar de revisões de código.
+
+Requisitos:
+- Python e Flask ou FastAPI
+- SQL (PostgreSQL ou SQLite)
+- Git
+- Testes automatizados com pytest
+
+Diferenciais:
+- Docker
+- Noções de AWS
+
+Oferecemos regime CLT, vale-refeição e trabalho híbrido.

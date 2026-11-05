@@ -1,0 +1,17 @@
+Analista DevOps Júnior | Nuvem Fictícia Ltda
+
+Atuação em automação de infraestrutura e entrega contínua.
+
+Responsabilidades:
+- Criar e manter pipelines de CI/CD.
+- Provisionar infraestrutura com Terraform.
+- Operar clusters Kubernetes e containers Docker.
+- Monitorar serviços na AWS.
+
+Requisitos:
+- Docker
+- Kubernetes
+- Terraform
+- AWS
+- Linux
+- Git

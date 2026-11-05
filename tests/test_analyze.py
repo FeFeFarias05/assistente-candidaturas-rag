@@ -92,6 +92,20 @@ def test_retry_corrige_citacao_inventada(monkeypatch):
     assert "fantasma.pdf#p1" in seen[1] and "CORREÇÃO" in seen[1]
 
 
+def test_retry_tambem_corrige_tecnologia_inventada(monkeypatch):
+    inventado = BOM.replace("- Python: usa Python e Flask [cv.pdf#p1]", "- Python: usa Python [cv.pdf#p1]\n- C#: domina C# [cv.pdf#p1]")
+    seen = fake_llm(monkeypatch, inventado, BOM)
+    body, warnings = analyze.analyze_no_rag(JOB, SEGS)
+    assert body == BOM and warnings == [] and len(seen) == 2
+    assert "C#: citada em Pontos fortes" in seen[1]
+
+
+def test_html_casa_com_html5():
+    job = {**JOB, "requirements": [{"text": "HTML", "kind": "tech", "required": True}]}
+    body = "## Pontos fortes\n- HTML: mantém páginas [cv.pdf#p1]\n## Lacunas\n- x"
+    assert analyze.unsupported_techs(body, job, {"cv.pdf#p1": "Usa HTML5 e CSS3"}) == []
+
+
 def test_se_persistir_vira_aviso(monkeypatch):
     ruim = BOM.replace("[cv.pdf#p1]", "[fantasma.pdf#p1]")
     fake_llm(monkeypatch, ruim, ruim)

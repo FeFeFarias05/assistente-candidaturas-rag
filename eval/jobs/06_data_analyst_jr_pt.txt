@@ -1,0 +1,16 @@
+Analista de Dados Júnior | Varejo Fictício
+
+Apoio ao time de BI na criação de relatórios e análises.
+
+Responsabilidades:
+- Extrair dados com SQL.
+- Tratar e analisar dados com Python.
+- Construir dashboards em Power BI.
+- Apresentar resultados para as áreas de negócio.
+
+Requisitos:
+- SQL
+- Python
+- Power BI
+- Excel avançado
+- Graduação em andamento em áreas de tecnologia ou exatas

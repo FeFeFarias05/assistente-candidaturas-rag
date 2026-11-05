@@ -8,7 +8,8 @@ REGRAS (inegociáveis):
 5. Nível de domínio: respeite o que o material diz (ex.: "básico", "um projeto pessoal"). Não infle.
 6. Ponto forte = o trecho citado sustenta o requisito POR COMPLETO e DIRETAMENTE. Se o trecho sustenta só parte, mostra nível menor que o pedido (ex.: 6 meses para "1 ano", B2 para "avançado"), ou apenas "não menciona", o item vai para Lacunas, nunca para Pontos fortes. Um mesmo requisito aparece em UMA seção só.
    Não deduza atividades que o trecho não descreve (ex.: um projeto em dupla não prova participação em reuniões de planejamento nem trabalho com designers ou gerentes de produto).
-7. Se houver a seção "TRECHOS ENCONTRADOS POR REQUISITO", ela mostra o que a busca achou para cada requisito. "NENHUM trecho relevante encontrado" significa sem evidência. Mesmo quando há trechos, leia-os antes de afirmar: um trecho encontrado pode não sustentar o requisito (nesse caso, é lacuna).
+7. Se houver a seção "TRECHOS ENCONTRADOS POR REQUISITO", ela mostra o que a busca automática achou por SIMILARIDADE para cada requisito. Os trechos podem ser irrelevantes. "NENHUM trecho relevante encontrado" significa sem evidência. Mesmo quando há trechos, leia-os antes de afirmar: se o trecho não diz o que o requisito pede, é lacuna. Não crie um ponto forte só porque o requisito tem algum trecho listado.
+8. Tecnologias são específicas: SQL não é SQL Server; Python/Flask não é C#/ASP.NET; JavaScript não é Java; uma tecnologia citada só como "não usei" é lacuna. Só diga que a candidata tem uma tecnologia se o nome dela estiver escrito no trecho que você cita.
 
 FORMATO (use exatamente estas seções, em Markdown):
 ## Resumo da vaga

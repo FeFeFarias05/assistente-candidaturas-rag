@@ -1,0 +1,15 @@
+Web Developer Intern | Remote Startup (fictional)
+
+Join our small remote team as a web development intern and learn how real products are built.
+
+What you will do:
+- Fix small bugs and improve existing pages.
+- Help build new features with HTML, CSS and JavaScript.
+- Learn our code review process.
+
+What we are looking for:
+- Currently studying computer science or software engineering
+- HTML, CSS and JavaScript
+- Familiarity with Git
+- Good written English
+- Eagerness to learn and ask questions

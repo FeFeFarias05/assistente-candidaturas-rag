@@ -1,0 +1,18 @@
+Mid-Level React Developer | Example Labs (fictional)
+
+We are looking for a React developer with at least 3 years of professional experience to build our customer-facing dashboard.
+
+What you will do:
+- Build and maintain complex React applications with TypeScript.
+- Manage global state with Redux.
+- Write unit tests with Jest and React Testing Library.
+- Work closely with designers and product managers.
+
+Requirements:
+- 3+ years of professional experience with React
+- TypeScript
+- Redux
+- Jest
+- Fluent English
+
+Nice to have: GraphQL.

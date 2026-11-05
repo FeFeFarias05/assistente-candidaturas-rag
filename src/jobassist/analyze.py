@@ -5,7 +5,7 @@ from datetime import date
 from pathlib import Path
 
 from .llm import complete
-from .retrieve import retrieve
+from .retrieve import retrieve, term_pattern
 
 ROOT = Path(__file__).resolve().parents[2]
 PROMPT = (ROOT / "prompts" / "analyze.md").read_text(encoding="utf-8")
@@ -53,7 +53,7 @@ def unsupported_techs(body: str, job: dict, texts: dict[str, str]) -> list[str]:
         cited = CITATION.findall(item)
         cited_text = " ".join(texts.get(c, "") for c in cited)
         for t in techs:
-            word = re.compile(rf"(?<!\w){re.escape(t)}(?!\w)", re.IGNORECASE)
+            word = term_pattern(t)
             if word.search(CITATION.sub("", item)) and not word.search(cited_text):
                 out.append(f"{t}: citada em Pontos fortes sem aparecer no trecho citado")
     return sorted(set(out))
@@ -65,21 +65,25 @@ def strengths_saying_no_evidence(body: str) -> list[str]:
     return [f"Pontos fortes contém item sem evidência: {i.strip()[:60]}" for i in items if "sem evidência" in i.lower()]
 
 
+def problems(body: str, job: dict, texts: dict[str, str]) -> list[str]:
+    return ([f"citação inexistente: [{c}]" for c in invalid_citations(body, set(texts))]
+            + unsupported_techs(body, job, texts) + strengths_saying_no_evidence(body))
+
+
 def generate(job: dict, items, lang: str, evidence=None) -> tuple[str, list[str]]:
-    """Gera o relatório, valida e tenta corrigir uma vez. Devolve (texto, avisos)."""
+    """Gera o relatório, valida e tenta corrigir uma vez. Devolve (texto, avisos que restaram)."""
     texts = {s.id: s.text for s in items}
     prompt = build_prompt(job, items, lang, evidence)
     body = complete(prompt, system=PROMPT)
-    bad = invalid_citations(body, set(texts))
-    if bad:
-        fix = (f"{prompt}\n\n## CORREÇÃO\nSua resposta citou ids que não existem: {bad}. "
-               f"Reescreva o relatório usando SOMENTE estes ids: {sorted(texts)}. "
-               "Se não houver trecho que sustente uma afirmação, remova-a ou mova o item para Lacunas.")
+    found = problems(body, job, texts)
+    if found:
+        fix = (f"{prompt}\n\n## CORREÇÃO\nSua resposta tem problemas:\n" + "\n".join(f"- {p}" for p in found)
+               + f"\n\nReescreva o relatório inteiro, usando SOMENTE estes ids: {sorted(texts)}. "
+               "Item de Pontos fortes que o trecho citado não sustenta por completo deve ir para Lacunas "
+               "(ou ser removido). Não afirme tecnologia que não está escrita no trecho citado.")
         body = complete(fix, system=PROMPT)
-        bad = invalid_citations(body, set(texts))
-    warnings = ([f"citação inexistente: [{c}]" for c in bad]
-                + unsupported_techs(body, job, texts) + strengths_saying_no_evidence(body))
-    return body, warnings
+        found = problems(body, job, texts)
+    return body, found
 
 
 # ---------- modos ----------

@@ -1,0 +1,17 @@
+Desenvolvedor(a) Front-end Júnior | Agência Fictícia Digital
+
+Vaga para criar e manter sites e landing pages para clientes.
+
+Responsabilidades:
+- Implementar páginas responsivas a partir do layout do time de design.
+- Consumir APIs REST para exibir dados dinâmicos.
+- Corrigir bugs reportados pelos clientes.
+
+Requisitos:
+- HTML5 e CSS3
+- JavaScript
+- Bootstrap
+- Git e GitHub
+- Boa comunicação
+
+Diferencial: React.

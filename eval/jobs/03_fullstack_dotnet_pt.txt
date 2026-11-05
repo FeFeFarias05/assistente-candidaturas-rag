@@ -1,0 +1,18 @@
+Desenvolvedor(a) Full Stack .NET | Banco Fictício S.A.
+
+Vaga para atuar no desenvolvimento de sistemas internos de crédito.
+
+Responsabilidades:
+- Desenvolver serviços e APIs em C# e ASP.NET Core.
+- Criar telas com HTML, CSS e JavaScript.
+- Escrever consultas e procedures em SQL Server.
+- Publicar aplicações na nuvem Azure.
+
+Requisitos:
+- C#
+- ASP.NET Core
+- SQL Server
+- Azure
+- JavaScript
+
+Experiência mínima de 2 anos.
