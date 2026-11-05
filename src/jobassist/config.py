@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)  # o .env do projeto vale mais que variáveis do shell
 
 
 @dataclass(frozen=True)
