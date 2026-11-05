@@ -151,5 +151,16 @@ Poucos e úteis, sem framework além do `pytest`:
 - Modelo exato da OpenAI: escolho no Dia 1 com base em custo e qualidade, e deixo em `.env`.
 - Limiar de similaridade e valor de top-k: calibrados na avaliação do Dia 6.
 
----
-Próximo passo, depois da sua aprovação: `tasks.md`.
+## 11. Desvios do plano durante a implementação
+
+| Plano | O que foi feito | Por quê |
+|-------|-----------------|---------|
+| `multilingual-e5-small` | `paraphrase-multilingual-MiniLM-L12-v2` (220 MB) | O `fastembed` não suporta o e5-small. O e5-large tem 2,2 GB. |
+| Chunks de ~700 caracteres | ~450 caracteres | O MiniLM lê ~128 tokens; chunks maiores seriam truncados. |
+| Prefixos `query:`/`passage:` | Parâmetro `kind` mantido, ignorado pelo MiniLM | Só e5 usa prefixos; a assinatura permite trocar de modelo. |
+| Busca só por similaridade | Busca híbrida: bônus para termo de tecnologia citado literalmente | O MiniLM é fraco com nomes soltos ("JavaScript" = 0,24). |
+| Temperatura 0 na extração | Sem `temperature`; JSON Schema estrito | Modelos GPT-5 só aceitam a temperatura padrão. |
+| Validação: citações e tecnologias; erro = 1 nova tentativa só para citações | Nova tentativa também para tecnologia sem suporte e item contraditório | A avaliação (Dia 6) mostrou invenção que passava pela validação só como aviso. |
+| `openai`, `fastembed`, `pypdf`, `numpy`, `python-dotenv` | Mesmas dependências (numpy vem com o fastembed); versões fixadas no Dia 7 | — |
+
+Medidas e justificativas em [avaliacao.md](avaliacao.md).

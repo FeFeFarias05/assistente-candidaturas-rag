@@ -1,5 +1,5 @@
-openai
-python-dotenv
-pypdf
-pytest
-fastembed
+openai==3.46.0
+python-dotenv==1.2.4
+pypdf==6.21.4
+fastembed==0.9.1
+pytest==9.2.0
