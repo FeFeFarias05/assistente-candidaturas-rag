@@ -14,6 +14,12 @@ def _client() -> OpenAI:
     return OpenAI(api_key=cfg.api_key)
 
 
+def embeddings_openai(texts: list[str], model: str) -> list[list[float]]:
+    print(f"[llm] enviando {sum(map(len, texts))} caracteres para {model} (embeddings)", file=sys.stderr)
+    resp = _client().embeddings.create(model=model, input=texts)
+    return [d.embedding for d in resp.data]
+
+
 def complete(prompt: str, system: str | None = None, schema: dict | None = None):
     """Devolve texto, ou dict se `schema` (JSON Schema) for dado."""
     cfg = load_config()
