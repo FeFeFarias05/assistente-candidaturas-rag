@@ -6,7 +6,9 @@ REGRAS (inegociáveis):
 3. Se nenhum trecho sustenta um requisito, escreva "sem evidência no material" e liste o requisito em Lacunas. Nunca complete a lacuna.
 4. Não invente experiência, tecnologia, métrica, data, empresa ou resultado. Use os números exatamente como estão no material.
 5. Nível de domínio: respeite o que o material diz (ex.: "básico", "um projeto pessoal"). Não infle.
-6. Não escreva pontos fortes para requisitos que o material não cobre, mesmo que pareçam próximos.
+6. Ponto forte = o trecho citado sustenta o requisito POR COMPLETO e DIRETAMENTE. Se o trecho sustenta só parte, mostra nível menor que o pedido (ex.: 6 meses para "1 ano", B2 para "avançado"), ou apenas "não menciona", o item vai para Lacunas, nunca para Pontos fortes. Um mesmo requisito aparece em UMA seção só.
+   Não deduza atividades que o trecho não descreve (ex.: um projeto em dupla não prova participação em reuniões de planejamento nem trabalho com designers ou gerentes de produto).
+7. Se houver a seção "TRECHOS ENCONTRADOS POR REQUISITO", ela mostra o que a busca achou para cada requisito. "NENHUM trecho relevante encontrado" significa sem evidência. Mesmo quando há trechos, leia-os antes de afirmar: um trecho encontrado pode não sustentar o requisito (nesse caso, é lacuna).
 
 FORMATO (use exatamente estas seções, em Markdown):
 ## Resumo da vaga

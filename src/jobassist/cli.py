@@ -3,10 +3,10 @@ import json
 import sys
 from pathlib import Path
 
-from .analyze import analyze_no_rag, save_report
+from .analyze import analyze_no_rag, analyze_rag, save_report
 from .config import load_config
 from .extract import extract_job
-from .ingest import ingest
+from .ingest import ingest, load_index
 from .material import load_material
 
 SAMPLE = Path("data/sample")
@@ -46,19 +46,26 @@ def main(argv=None):
         print(json.dumps(extract_job(read_job(args.vaga)), ensure_ascii=False, indent=2))
         return
 
-    if not args.no_rag:
-        p.error("o modo RAG chega no Dia 4; por enquanto use --no-rag")
     folder = Path(load_config().material_dir)
-    if folder.resolve() != SAMPLE.resolve() and not args.yes_send_all:
-        p.error(f"--no-rag envia TODO o conteúdo de {folder} à API. Use o material fictício ou confirme com --yes-send-all")
-    segments = load_material(folder)
-    if not segments:
-        p.error(f"nenhum material encontrado em {folder}")
-    job = extract_job(read_job(args.vaga))
-    print(f"[analyze] enviando o material inteiro ({len(segments)} trechos) à API", file=sys.stderr)
-    body = analyze_no_rag(job, segments, args.lang)
-    path = save_report(job, body, "sem RAG")
+    if args.no_rag:
+        if folder.resolve() != SAMPLE.resolve() and not args.yes_send_all:
+            p.error(f"--no-rag envia TODO o conteúdo de {folder} à API. Use o material fictício ou confirme com --yes-send-all")
+        segments = load_material(folder)
+        if not segments:
+            p.error(f"nenhum material encontrado em {folder}")
+        job = extract_job(read_job(args.vaga))
+        print(f"[analyze] enviando o material inteiro ({len(segments)} trechos) à API", file=sys.stderr)
+        body, warnings = analyze_no_rag(job, segments, args.lang)
+        mode = "sem RAG"
+    else:
+        ingest(folder)  # incremental: só reindexa o que mudou
+        job = extract_job(read_job(args.vaga))
+        body, warnings = analyze_rag(job, load_index(), args.lang)
+        mode = "RAG"
+    path = save_report(job, body, mode, warnings)
     print(body)
+    for w in warnings:
+        print(f"[analyze] AVISO: {w}", file=sys.stderr)
     print(f"\n[analyze] relatório salvo em {path}", file=sys.stderr)
 
 

@@ -15,6 +15,9 @@ Serve para comparar com a versão RAG no Dia 6 (CA10).
 - vaga3, "code reviews": o perfil só teve os próprios pull requests revisados; não revisou os de outros.
 - vaga3, "English": o perfil tem B2 e a vaga prefere avançado.
 
+## Atenção: o prompt mudou depois desta linha de base
+Esta tabela foi feita com a primeira versão de `prompts/analyze.md`. No Dia 4, ao testar o RAG, o prompt foi endurecido (regra 6: ponto forte só com suporte completo e direto; um requisito em uma seção só; não deduzir atividades) e foi adicionada a regra 7 (mapa de trechos por requisito). Para a comparação RAG × sem RAG (CA10, Dia 6), os **dois modos serão rodados de novo com o prompt final**; os números desta página servem de registro histórico.
+
 ## Observações
 - As citações são por arquivo/página (`curriculo.pdf#p1`). Com RAG, passam a ser por trecho.
 - Todo o material foi enviado à API (modo `--no-rag` só roda com o material fictício, a menos que se use `--yes-send-all`).
