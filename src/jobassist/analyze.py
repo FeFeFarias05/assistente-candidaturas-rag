@@ -11,7 +11,7 @@ from .retrieve import retrieve, term_pattern
 ROOT = Path(__file__).resolve().parents[2]
 PROMPT = (ROOT / "prompts" / "analyze.md").read_text(encoding="utf-8")
 LANGS = {"pt": "português", "en": "inglês (English)"}
-CITATION = re.compile(r"\[([^\[\]\n]+?\.(?:pdf|md|txt)(?:#[^\[\]\n]+)?)\]", re.IGNORECASE)
+CITATION = re.compile(r"\[([^\[\]\n]+?\.(?:pdf|docx|pptx|md|txt)(?:#[^\[\]\n]+)?)\]", re.IGNORECASE)
 
 
 # ---------- prompt ----------
