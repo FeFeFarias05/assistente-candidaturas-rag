@@ -92,6 +92,14 @@ O que a avaliação ensinou:
 - Só PDF com texto selecionável (sem OCR) e só tecnologias de uma palavra são conferidas no trecho citado (termos como "web development" dariam falso alarme).
 - Interface só no terminal.
 
+## Fluxo de trabalho (Git)
+
+- **`main`**: versão estável. Só recebe merge da `dev` (release) e é marcada com tag (`v0.1.0`...).
+- **`dev`**: integração. Recebe o merge das branches de trabalho.
+- **`feature/<nome>`** e **`fix/<nome>`**: saem da `dev` e voltam para ela com `git merge --no-ff`, para o histórico mostrar cada entrega.
+- **Commits** curtos, com prefixo: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`.
+- **Nunca versionar** `.env`, `data/private/`, `data/vagas/`, `*.db` e `reports/` (já estão no `.gitignore`).
+
 ## Estrutura
 
 ```
