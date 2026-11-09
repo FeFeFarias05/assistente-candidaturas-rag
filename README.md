@@ -36,7 +36,11 @@ Na primeira execução o modelo de embeddings (~220 MB) é baixado para `.cache/
 | `jobassist analyze vaga.txt --no-rag` | Linha de base: manda o material inteiro no prompt. |
 | `jobassist extract vaga.txt` | Só extrai os requisitos (JSON). |
 | `jobassist ingest [--rebuild]` | Indexa o material. O `analyze` já faz isso, só do que mudou. |
-| `jobassist add EMPRESA TITULO` / `list` / `status ID NOVO` | Registro de candidaturas (SQLite). Status: interessada, candidatei, entrevista, recusada, oferta. |
+| `jobassist add EMPRESA TITULO` / `list` | Registra e lista candidaturas (SQLite). Status: interessada, candidatei, entrevista, recusada, oferta. |
+| `jobassist show ID` | Mostra a candidatura e o relatório associado. |
+| `jobassist edit ID [--company X] [--title X] [--date AAAA-MM-DD] [--status X]` | Edita só os campos informados. |
+| `jobassist status ID NOVO` | Atalho para mudar só o status. |
+| `jobassist delete ID [--yes]` | Apaga a candidatura (pergunta antes; o relatório em `reports/` fica). |
 
 **Usar o seu material real:** coloque PDF (com texto selecionável), PowerPoint (`.pptx`), Word (`.docx`), `.md` ou `.txt` em `data/private/` e ponha `MATERIAL_DIR=data/private` no `.env`. Essa pasta é ignorada pelo Git. Guarde as **vagas** em `data/vagas/` (também ignorada), nunca dentro de `data/private/`: tudo que está na pasta de material é lido como experiência sua.
 
