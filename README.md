@@ -38,7 +38,7 @@ Na primeira execução o modelo de embeddings (~220 MB) é baixado para `.cache/
 | `jobassist ingest [--rebuild]` | Indexa o material. O `analyze` já faz isso, só do que mudou. |
 | `jobassist add EMPRESA TITULO` / `list` / `status ID NOVO` | Registro de candidaturas (SQLite). Status: interessada, candidatei, entrevista, recusada, oferta. |
 
-**Usar o seu material real:** coloque PDF (com texto selecionável), `.md` ou `.txt` em `data/private/` e ponha `MATERIAL_DIR=data/private` no `.env`. Essa pasta é ignorada pelo Git. Guarde as **vagas** em `data/vagas/` (também ignorada), nunca dentro de `data/private/`: tudo que está na pasta de material é lido como experiência sua.
+**Usar o seu material real:** coloque PDF (com texto selecionável), PowerPoint (`.pptx`), Word (`.docx`), `.md` ou `.txt` em `data/private/` e ponha `MATERIAL_DIR=data/private` no `.env`. Essa pasta é ignorada pelo Git. Guarde as **vagas** em `data/vagas/` (também ignorada), nunca dentro de `data/private/`: tudo que está na pasta de material é lido como experiência sua.
 
 **Dados pessoais:** antes de indexar ou enviar qualquer coisa, o sistema remove as linhas com endereço, data de nascimento, telefone, CPF e e-mail (Linkedin e GitHub ficam) e avisa quantas removeu. É uma heurística por linha: dados pessoais no meio de um parágrafo não são pegos.
 
@@ -89,7 +89,7 @@ O que a avaliação ensinou:
 - O LLM varia entre execuções: a mesma vaga pode classificar um item como ponto forte numa rodada e como lacuna na outra (visto em teste). Os números da avaliação são de uma execução, não uma média.
 - A validação pega invenção de **tecnologia de uma palavra** e citação falsa, mas não pega toda inflação (ex.: "SQL" tratado como "SQL Server"; "projeto em dupla" tratado como "trabalho com designers"). O texto precisa de revisão humana.
 - A ordem do texto extraído de PDFs com caixas e barras laterais pode vir embaralhada (títulos fora do lugar); o conteúdo vem inteiro, mas a busca fica um pouco pior. O modo `layout` do `pypdf` não extraiu nada do PDF testado.
-- Só PDF com texto selecionável (sem OCR) e só tecnologias de uma palavra são conferidas no trecho citado (termos como "web development" dariam falso alarme).
+- PDF escaneado (imagem) não é lido, porque não há OCR (exigiria instalar o Tesseract no sistema). Slides e documentos só rendem o texto: imagens e gráficos se perdem. Só tecnologias de uma palavra são conferidas no trecho citado (termos como "web development" dariam falso alarme).
 - Interface só no terminal.
 
 ## Fluxo de trabalho (Git)
