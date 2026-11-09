@@ -70,6 +70,19 @@ def ingest(folder: str | Path, db_path: Path = INDEX_PATH, rebuild: bool = False
     return {"novos": len(todo), "inalterados": len(by_source) - len(todo), "removidos": len(gone)}
 
 
+def chunk_counts(db_path: Path = INDEX_PATH) -> dict[str, int]:
+    """Quantos trechos cada arquivo tem no índice (vazio se o índice não existe)."""
+    if not Path(db_path).exists():
+        return {}
+    db = sqlite3.connect(db_path)
+    try:
+        return dict(db.execute("SELECT source, COUNT(*) FROM chunks GROUP BY source"))
+    except sqlite3.OperationalError:  # arquivo existe mas ainda sem a tabela
+        return {}
+    finally:
+        db.close()
+
+
 def load_index(db_path: Path = INDEX_PATH):
     """Devolve (ids, textos, matriz de vetores) ou None se o índice não existe/está vazio."""
     if not Path(db_path).exists():
