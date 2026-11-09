@@ -3,7 +3,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import tracker
+from . import llm, tracker
 from .analyze import analyze_no_rag, analyze_rag, save_report
 from .config import load_config
 from .extract import extract_job
@@ -84,6 +84,14 @@ def manage(args) -> None:
 def main(argv=None):
     p = build_parser()
     args = p.parse_args(argv)
+    llm.reset_usage()
+    run(p, args)
+    summary = llm.usage_summary()
+    if summary:
+        print(f"[custo] {summary}", file=sys.stderr)
+
+
+def run(p: argparse.ArgumentParser, args) -> None:
 
     if args.cmd == "add":
         try:

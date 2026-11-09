@@ -42,6 +42,8 @@ Na primeira execução o modelo de embeddings (~220 MB) é baixado para `.cache/
 | `jobassist status ID NOVO` | Atalho para mudar só o status. |
 | `jobassist delete ID [--yes]` | Apaga a candidatura (pergunta antes; o relatório em `reports/` fica). |
 
+**Consumo da API:** ao final de cada comando que chama o LLM, o terminal mostra as chamadas e os tokens gastos (`[custo] ...`). Para ver também uma estimativa em dólar, preencha `PRICE_IN_PER_1M` e `PRICE_OUT_PER_1M` no `.env` com os preços da OpenAI para o seu modelo. Não embuti preços no código porque eles mudam; sem os dois valores, só os tokens aparecem.
+
 **Usar o seu material real:** coloque PDF (com texto selecionável), PowerPoint (`.pptx`), Word (`.docx`), `.md` ou `.txt` em `data/private/` e ponha `MATERIAL_DIR=data/private` no `.env`. Essa pasta é ignorada pelo Git. Guarde as **vagas** em `data/vagas/` (também ignorada), nunca dentro de `data/private/`: tudo que está na pasta de material é lido como experiência sua.
 
 **Dados pessoais:** antes de indexar ou enviar qualquer coisa, o sistema remove as linhas com endereço, data de nascimento, telefone, CPF e e-mail (Linkedin e GitHub ficam) e avisa quantas removeu. É uma heurística por linha: dados pessoais no meio de um parágrafo não são pegos.
