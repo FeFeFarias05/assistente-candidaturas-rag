@@ -221,3 +221,37 @@ def test_envio_grande_demais_da_413_em_json(ctx):
 
 def test_reindexar(ctx):
     assert ctx.client.post("/api/ingest", headers=H).get_json()["novos"] == 1
+
+
+# ---------- arquivos da interface ----------
+
+def test_pagina_inicial_e_arquivos_estaticos(ctx):
+    r = ctx.client.get("/")
+    html = r.get_data(as_text=True)
+    assert r.status_code == 200 and r.mimetype == "text/html" and "<title>" in html
+    for caminho in ("/static/app.js", "/static/app.css"):
+        assert caminho in html and ctx.client.get(caminho).status_code == 200
+
+
+def test_pagina_compativel_com_a_csp_sem_script_nem_estilo_inline():
+    html = (webapp.STATIC / "index.html").read_text(encoding="utf-8")
+    import re
+    assert not re.search(r"<script(?![^>]*\bsrc=)", html), "script inline seria bloqueado pela CSP"
+    assert ' style="' not in html and "<style" not in html and " onclick=" not in html
+    assert "script-src 'self'" in webapp.CSP and "'unsafe-inline'" not in webapp.CSP
+
+
+def test_front_end_nunca_injeta_html_do_llm():
+    js = (webapp.STATIC / "app.js").read_text(encoding="utf-8")
+    codigo = "\n".join(l for l in js.splitlines() if not l.strip().startswith(("/*", "//", "*")))
+    for perigoso in ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write", "eval(", "new Function"):
+        assert perigoso not in codigo, f"{perigoso} no front-end: o texto do LLM não é confiável"
+    assert "X-JobAssist" in js  # toda requisição que altera algo manda o cabeçalho anti-CSRF
+
+
+def test_front_end_nao_passa_null_para_replaceChildren():
+    js = (webapp.STATIC / "app.js").read_text(encoding="utf-8")
+    # replaceChildren escreve `null` como texto na tela; só vale com listas já filtradas ou com put()
+    import re
+    for m in re.finditer(r"\.replaceChildren\(([^)]*)", js):
+        assert "null" not in m.group(1), "use put() para argumentos que podem ser nulos"
