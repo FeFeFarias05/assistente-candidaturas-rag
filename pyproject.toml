@@ -7,10 +7,13 @@ name = "jobassist"
 version = "0.1.0"
 description = "Assistente de candidaturas com LLM e RAG"
 requires-python = ">=3.10"
-dependencies = ["openai", "python-dotenv", "pypdf", "fastembed"]
+dependencies = ["openai", "python-dotenv", "pypdf", "fastembed", "flask"]
 
 [project.scripts]
 jobassist = "jobassist.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+jobassist = ["web/static/*"]

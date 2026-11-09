@@ -45,6 +45,9 @@ def build_parser() -> argparse.ArgumentParser:
     de = sub.add_parser("delete", help="apaga uma candidatura (o relatório em reports/ fica)")
     de.add_argument("id", type=int)
     de.add_argument("--yes", action="store_true", help="não pergunta antes de apagar")
+    w = sub.add_parser("web", help="abre a interface web (só acessível nesta máquina)")
+    w.add_argument("--port", type=int, default=8765)
+    w.add_argument("--open", action="store_true", help="abre o navegador")
     i = sub.add_parser("ingest", help="indexa o material (embeddings) para a busca")
     i.add_argument("--rebuild", action="store_true", help="refaz o índice do zero (ex.: ao trocar de provedor)")
     return p
@@ -88,6 +91,10 @@ def main(argv=None):
 
 def run(p: argparse.ArgumentParser, args) -> None:
 
+    if args.cmd == "web":
+        from .web.app import serve  # import tardio: o Flask só é carregado se for usado
+
+        return serve(args.port, args.open)
     if args.cmd == "add":
         try:
             n = tracker.add(args.company, args.title, args.status, args.date)

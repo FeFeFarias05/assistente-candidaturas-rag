@@ -3,3 +3,4 @@ python-dotenv==1.2.4
 pypdf==6.21.4
 fastembed==0.9.1
 pytest==9.2.0
+flask==3.1.3
