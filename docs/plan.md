@@ -168,3 +168,16 @@ Poucos e úteis, sem framework além do `pytest`:
 | `openai`, `fastembed`, `pypdf`, `numpy`, `python-dotenv` | Mesmas dependências (numpy vem com o fastembed); versões fixadas no Dia 7 | — |
 
 Medidas e justificativas em [avaliacao.md](avaliacao.md).
+
+## 12. Evolução depois da v0.1.0 (v0.2.0)
+
+| Decisão | Alternativas | Escolha e motivo |
+|---------|--------------|------------------|
+| `.docx` e `.pptx` lidos com `zipfile` e XML da biblioteca padrão | `python-docx`, `python-pptx` | Zero dependência nova; só o texto interessa. Limite de 20 MB por parte do arquivo contra zip malicioso. |
+| Sem OCR | `pytesseract` | Exige instalar o Tesseract no sistema; PDF escaneado continua sem suporte e o aviso diz isso. |
+| Preços da API opcionais no `.env` | Tabela de preços no código | Os preços mudam e eu não consigo confirmá-los; sem eles, só os tokens aparecem. |
+| `service.py` compartilhado por CLI e web | Duplicar a lógica na web | Uma única regra de privacidade e de análise; a web não vira um segundo caminho sem as proteções. |
+| Flask + HTML/CSS/JS puros, sem build | FastAPI, React | Uma dependência nova e nenhuma etapa de build; é uma ferramenta local de uma pessoa. |
+| Cabeçalho `X-JobAssist` em toda requisição que altera algo | Token CSRF por sessão | Sem sessão nem login, o cabeçalho próprio basta: navegadores não o enviam entre origens sem preflight. |
+| Front-end monta o DOM com nós de texto | Renderizar Markdown com biblioteca | O relatório vem de um LLM; não usar `innerHTML` elimina uma classe inteira de problemas (há teste). |
+| Upload bloqueado no material de exemplo | Permitir | A pasta `data/sample` é versionada; um upload ali poderia ir parar no Git. |

@@ -35,12 +35,40 @@ Na primeira execução o modelo de embeddings (~220 MB) é baixado para `.cache/
 | `jobassist analyze vaga.txt --register candidatei` | Registra sem perguntar. |
 | `jobassist analyze vaga.txt --no-rag` | Linha de base: manda o material inteiro no prompt. |
 | `jobassist extract vaga.txt` | Só extrai os requisitos (JSON). |
+| `jobassist web [--port 8765] [--open]` | Abre a interface web (veja abaixo). |
 | `jobassist ingest [--rebuild]` | Indexa o material. O `analyze` já faz isso, só do que mudou. |
-| `jobassist add EMPRESA TITULO` / `list` / `status ID NOVO` | Registro de candidaturas (SQLite). Status: interessada, candidatei, entrevista, recusada, oferta. |
+| `jobassist add EMPRESA TITULO` / `list` | Registra e lista candidaturas (SQLite). Status: interessada, candidatei, entrevista, recusada, oferta. |
+| `jobassist show ID` | Mostra a candidatura e o relatório associado. |
+| `jobassist edit ID [--company X] [--title X] [--date AAAA-MM-DD] [--status X]` | Edita só os campos informados. |
+| `jobassist status ID NOVO` | Atalho para mudar só o status. |
+| `jobassist delete ID [--yes]` | Apaga a candidatura (pergunta antes; o relatório em `reports/` fica). |
 
-**Usar o seu material real:** coloque PDF (com texto selecionável), `.md` ou `.txt` em `data/private/` e ponha `MATERIAL_DIR=data/private` no `.env`. Essa pasta é ignorada pelo Git. Guarde as **vagas** em `data/vagas/` (também ignorada), nunca dentro de `data/private/`: tudo que está na pasta de material é lido como experiência sua.
+**Consumo da API:** ao final de cada comando que chama o LLM, o terminal mostra as chamadas e os tokens gastos (`[custo] ...`). Para ver também uma estimativa em dólar, preencha `PRICE_IN_PER_1M` e `PRICE_OUT_PER_1M` no `.env` com os preços da OpenAI para o seu modelo. Não embuti preços no código porque eles mudam; sem os dois valores, só os tokens aparecem.
+
+**Usar o seu material real:** coloque PDF (com texto selecionável), PowerPoint (`.pptx`), Word (`.docx`), `.md` ou `.txt` em `data/private/` e ponha `MATERIAL_DIR=data/private` no `.env`. Essa pasta é ignorada pelo Git. Guarde as **vagas** em `data/vagas/` (também ignorada), nunca dentro de `data/private/`: tudo que está na pasta de material é lido como experiência sua.
 
 **Dados pessoais:** antes de indexar ou enviar qualquer coisa, o sistema remove as linhas com endereço, data de nascimento, telefone, CPF e e-mail (Linkedin e GitHub ficam) e avisa quantas removeu. É uma heurística por linha: dados pessoais no meio de um parágrafo não são pegos.
+
+## Interface web
+
+```bash
+jobassist web --open        # abre http://127.0.0.1:8765
+```
+
+Três telas, com as cores e as fontes do portfólio (Fraunces e Inter):
+
+- **Analisar:** cola a vaga e mostra o relatório. Pontos fortes e lacunas ficam lado a lado, cada afirmação tem uma etiqueta com o trecho de origem, e o rascunho de mensagem tem o botão "Copiar sem as citações". Mostra o consumo da API e deixa registrar a candidatura.
+- **Acompanhar:** lista as candidaturas, com filtro, mudança de status direto na lista, edição, relatório e exclusão.
+- **Material:** lista os arquivos indexados, adiciona (PDF, Word, PowerPoint, Markdown, texto), remove e reindexa. Com o material de exemplo ativo, a tela não deixa mexer nos arquivos, porque essa pasta é versionada no Git.
+
+Cuidados de segurança, porque o servidor lê o seu material e usa a sua chave:
+- Escuta só em `127.0.0.1` e recusa qualquer outro `Host`.
+- Toda requisição que altera algo exige um cabeçalho próprio. Sem ele, uma página qualquer aberta no seu navegador não consegue enviar arquivos nem disparar análises.
+- Cabeçalhos de segurança (CSP) e leitura de relatórios restrita à pasta `reports/`.
+- O texto do relatório vem de um LLM, então o front-end nunca usa `innerHTML`: monta tudo com nós de texto (há um teste que garante isso).
+- Ao abrir a página, o navegador baixa as fontes do Google Fonts. Não há outro recurso externo.
+
+É o servidor de desenvolvimento do Flask: serve para uso local, não para expor na internet.
 
 ## Como funciona
 
@@ -89,8 +117,8 @@ O que a avaliação ensinou:
 - O LLM varia entre execuções: a mesma vaga pode classificar um item como ponto forte numa rodada e como lacuna na outra (visto em teste). Os números da avaliação são de uma execução, não uma média.
 - A validação pega invenção de **tecnologia de uma palavra** e citação falsa, mas não pega toda inflação (ex.: "SQL" tratado como "SQL Server"; "projeto em dupla" tratado como "trabalho com designers"). O texto precisa de revisão humana.
 - A ordem do texto extraído de PDFs com caixas e barras laterais pode vir embaralhada (títulos fora do lugar); o conteúdo vem inteiro, mas a busca fica um pouco pior. O modo `layout` do `pypdf` não extraiu nada do PDF testado.
-- Só PDF com texto selecionável (sem OCR) e só tecnologias de uma palavra são conferidas no trecho citado (termos como "web development" dariam falso alarme).
-- Interface só no terminal.
+- PDF escaneado (imagem) não é lido, porque não há OCR (exigiria instalar o Tesseract no sistema). Slides e documentos só rendem o texto: imagens e gráficos se perdem. Só tecnologias de uma palavra são conferidas no trecho citado (termos como "web development" dariam falso alarme).
+- A interface web é local e de um usuário só: sem login, e as análises rodam uma por vez.
 
 ## Fluxo de trabalho (Git)
 
@@ -104,11 +132,12 @@ O que a avaliação ensinou:
 
 ```
 docs/        especificação, plano, tarefas, avaliação, linha de base, exemplo
-src/jobassist/  extract · material · chunking · embed · ingest · retrieve · analyze · tracker · llm · cli
+src/jobassist/  extract · material · chunking · embed · ingest · retrieve · analyze · tracker · service · llm · cli
+             web/ (Flask + interface em HTML, CSS e JS puros)
 prompts/     extract.md, analyze.md (editáveis sem tocar no código)
 data/sample/ material fictício (versionado) · data/private/ material real e data/vagas/ vagas (ignorados)
 eval/        vagas de teste, run_eval.py, resultados
-tests/       83 testes (pytest), sem chamar a API
+tests/       169 testes (pytest), sem chamar a API
 ```
 
 Testes: `pytest`. A avaliação (`eval/run_eval.py`) chama a API de verdade e fica fora do `pytest`.

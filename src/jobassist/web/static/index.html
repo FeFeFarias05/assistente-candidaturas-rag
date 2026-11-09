@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Assistente de candidaturas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <a class="skip" href="#main">Pular para o conteúdo</a>
+
+  <header class="top">
+    <div class="wrap top__row">
+      <a class="brand" href="#analisar">Assistente de candidaturas</a>
+      <nav class="tabs" aria-label="Seções">
+        <a href="#analisar" data-tab="analisar">Analisar</a>
+        <a href="#acompanhar" data-tab="acompanhar">Acompanhar</a>
+        <a href="#material" data-tab="material">Material</a>
+      </nav>
+      <p class="badge" id="badge" hidden></p>
+    </div>
+  </header>
+
+  <div class="wrap"><p class="alert" id="banner" role="alert" hidden></p></div>
+
+  <main id="main" class="wrap">
+    <!-- Analisar -->
+    <section class="panel" id="tab-analisar" aria-labelledby="h-analisar" hidden>
+      <h1 class="display" id="h-analisar">Analise uma vaga contra o seu material.</h1>
+      <p class="lede">Cole o texto da vaga. O sistema mostra o que você já tem, o que falta e de qual trecho do seu material vem cada ponto. O texto final é seu: revise tudo antes de usar.</p>
+
+      <form class="form" id="form" novalidate>
+        <label class="sr" for="vaga">Texto da vaga</label>
+        <textarea id="vaga" rows="9" maxlength="50000" placeholder="Cole aqui o texto da vaga"></textarea>
+        <div class="form__row">
+          <div class="field">
+            <label for="lang">Idioma do rascunho</label>
+            <select id="lang">
+              <option value="">Igual ao da vaga</option>
+              <option value="pt">Português</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+          <label class="check"><input type="checkbox" id="full"><span>Enviar o material inteiro, sem busca</span></label>
+          <button class="btn" type="submit" id="go">Analisar vaga</button>
+        </div>
+        <p class="hint" id="hint"></p>
+      </form>
+
+      <p class="progress" id="progress" role="status" hidden>Analisando a vaga. Leva de 20 a 60 segundos.</p>
+      <p class="alert" id="error" role="alert" hidden></p>
+      <article class="result" id="result" hidden></article>
+    </section>
+
+    <!-- Acompanhar -->
+    <section class="panel" id="tab-acompanhar" aria-labelledby="h-acompanhar" hidden>
+      <h1 class="display" id="h-acompanhar">Acompanhe onde cada candidatura está.</h1>
+      <p class="lede" id="apps-lede"></p>
+      <div class="filters" id="filters" role="group" aria-label="Filtrar por status"></div>
+      <ul class="apps" id="apps"></ul>
+      <p class="alert" id="apps-error" role="alert" hidden></p>
+
+      <details class="new" id="new">
+        <summary class="btn btn--outline">Nova candidatura</summary>
+        <form class="new__form" id="form-new">
+          <div class="grid2">
+            <div class="field"><label for="n-company">Empresa</label><input id="n-company" maxlength="200" required></div>
+            <div class="field"><label for="n-title">Vaga</label><input id="n-title" maxlength="200" required></div>
+            <div class="field"><label for="n-date">Data</label><input id="n-date" type="date"></div>
+            <div class="field"><label for="n-status">Status</label><select id="n-status"></select></div>
+          </div>
+          <button class="btn" type="submit">Registrar candidatura</button>
+        </form>
+      </details>
+    </section>
+
+    <!-- Material -->
+    <section class="panel" id="tab-material" aria-labelledby="h-material" hidden>
+      <h1 class="display" id="h-material">O que o sistema sabe sobre você.</h1>
+      <p class="lede" id="mat-lede"></p>
+      <ul class="files" id="files"></ul>
+      <div class="mat-actions">
+        <button class="btn" type="button" id="add-files">Adicionar arquivos</button>
+        <button class="btn btn--outline" type="button" id="reindex">Reindexar</button>
+        <input class="sr" type="file" id="upload" multiple accept=".pdf,.docx,.pptx,.md,.txt" tabindex="-1">
+      </div>
+      <p class="note" id="mat-msg" role="status"></p>
+      <p class="note">Formatos aceitos: PDF com texto selecionável, Word, PowerPoint, Markdown e texto. Antes de indexar, o sistema remove linhas com endereço, telefone, e-mail e CPF. PDF escaneado não é lido, e imagens de slides se perdem.</p>
+    </section>
+  </main>
+
+  <!-- Caixas de diálogo -->
+  <dialog id="dlg-edit" aria-labelledby="dlg-edit-title">
+    <form method="dialog" id="form-edit">
+      <h2 id="dlg-edit-title">Editar candidatura</h2>
+      <div class="grid2">
+        <div class="field"><label for="e-company">Empresa</label><input id="e-company" maxlength="200" required></div>
+        <div class="field"><label for="e-title">Vaga</label><input id="e-title" maxlength="200" required></div>
+        <div class="field"><label for="e-date">Data</label><input id="e-date" type="date" required></div>
+        <div class="field"><label for="e-status">Status</label><select id="e-status"></select></div>
+      </div>
+      <p class="alert" id="e-error" role="alert" hidden></p>
+      <div class="dlg__actions">
+        <button class="btn btn--outline" type="button" data-close>Cancelar</button>
+        <button class="btn" type="submit">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-confirm" aria-labelledby="dlg-confirm-title">
+    <form method="dialog">
+      <h2 id="dlg-confirm-title"></h2>
+      <p id="dlg-confirm-text"></p>
+      <div class="dlg__actions">
+        <button class="btn btn--outline" type="button" data-close>Cancelar</button>
+        <button class="btn btn--danger" type="submit" id="dlg-confirm-ok"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-report" class="dlg--wide" aria-labelledby="dlg-report-title">
+    <div class="dlg__head">
+      <h2 id="dlg-report-title">Relatório</h2>
+      <button class="btn btn--outline btn--sm" type="button" data-close>Fechar</button>
+    </div>
+    <div class="report" id="dlg-report-body"></div>
+  </dialog>
+
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
