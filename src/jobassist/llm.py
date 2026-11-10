@@ -61,10 +61,11 @@ def embeddings_openai(texts: list[str], model: str) -> list[list[float]]:
     return [d.embedding for d in resp.data]
 
 
-def complete(prompt: str, system: str | None = None, schema: dict | None = None):
-    """Devolve texto, ou dict se `schema` (JSON Schema) for dado."""
+def complete(prompt: str, system: str | None = None, schema: dict | None = None, model: str | None = None):
+    """Devolve texto, ou dict se `schema` (JSON Schema) for dado. `model` troca o modelo só nesta chamada."""
     cfg = load_config()
-    if not cfg.model:
+    model = model or cfg.model
+    if not model:
         raise RuntimeError("OPENAI_MODEL ausente no .env.")
     messages = ([{"role": "system", "content": system}] if system else []) + [
         {"role": "user", "content": prompt}
@@ -77,9 +78,9 @@ def complete(prompt: str, system: str | None = None, schema: dict | None = None)
         }
     # Transparência de privacidade: avisa o que está saindo da máquina.
     sent = sum(len(m["content"]) for m in messages)
-    print(f"[llm] enviando {sent} caracteres para {cfg.model}", file=sys.stderr)
+    print(f"[llm] enviando {sent} caracteres para {model}", file=sys.stderr)
     # sem `temperature`: modelos GPT-5 só aceitam o padrão
-    resp = _client().chat.completions.create(model=cfg.model, messages=messages, **kwargs)
+    resp = _client().chat.completions.create(model=model, messages=messages, **kwargs)
     _add_usage(resp)
     text = resp.choices[0].message.content
     return json.loads(text) if schema else text
