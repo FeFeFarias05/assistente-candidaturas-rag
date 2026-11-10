@@ -44,7 +44,7 @@ flowchart LR
 |---|---|---|
 | [Fidelidade](docs/avaliacao.md) (7 vagas, 2 modos) | O sistema inventa experiência? | Nenhuma tecnologia de uma palavra ausente chegou a "Pontos fortes". Na 1ª rodada o RAG inventou 5 itens; reforcei a validação |
 | [Retrieval](docs/avaliacao-retrieval.md) (108 consultas, 183 trechos) | A busca acha a evidência, e sabe dizer quando não existe? | **A busca híbrida supera a só semântica: +8 pp de Hit@3 (IC 95% de +2 a +14).** Quase todo o resto ficou **inconclusivo** |
-| [Fundamentação](docs/avaliacao-fundamentacao.md) (222 afirmações) | Cada afirmação é sustentada pelo trecho que cita? | 80 a 83% totalmente sustentadas, **0% falsas**, 17 a 20% parciais. RAG contra material inteiro: inconclusivo |
+| [Fundamentação](docs/avaliacao-fundamentacao.md) (222 afirmações) | Cada afirmação é sustentada pelo trecho que cita? | 80 a 83% totalmente sustentadas, 17 a 20% parciais, **0% julgadas não sustentadas** (pelo juiz, um LLM ainda sem validação humana). RAG contra material inteiro: inconclusivo |
 | [Escala](docs/benchmark-escala.md) (1 mil a 200 mil trechos) | Quando a força bruta deixa de bastar? | **O gargalo era reler o SQLite a cada análise, não a busca:** 822 ms para 56 ms em 200 mil trechos com o cache |
 
 **Defeitos reais que a avaliação encontrou:** (1) 9% dos trechos eram só um título solto, que ganhava nota alta na busca; (2) o carregamento do índice custava 14 vezes mais que a busca; (3) o RAG afirmava tecnologias que o perfil não tem. Os três foram corrigidos e têm testes. O efeito medido da correção do chunking foi **pequeno e inconclusivo**, e está escrito assim.
