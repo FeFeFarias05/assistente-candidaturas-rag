@@ -94,3 +94,18 @@ def test_embeddings_openai_conta_so_entrada(monkeypatch):
     llm.reset_usage()
     llm.embeddings_openai(["x"], "m")
     assert (llm.usage()["input"], llm.usage()["output"]) == (7, 0)
+
+
+def test_modelo_pode_ser_trocado_so_numa_chamada(monkeypatch):
+    monkeypatch.setenv("OPENAI_MODEL", "gerador")
+    usados = []
+
+    def create(**kw):
+        usados.append(kw["model"])
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content="ok"))])
+
+    monkeypatch.setattr(llm, "_client", lambda: SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create))))
+    llm.complete("a")
+    llm.complete("b", model="juiz")
+    llm.complete("c")
+    assert usados == ["gerador", "juiz", "gerador"]  # a troca não vaza para as chamadas seguintes

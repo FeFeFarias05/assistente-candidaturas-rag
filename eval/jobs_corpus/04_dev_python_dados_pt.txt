@@ -1,0 +1,18 @@
+Desenvolvedor(a) Python para Dados | Varejo Fictício
+
+Atuação em análise e automação de dados para as áreas de negócio.
+
+Responsabilidades:
+- Extrair e transformar dados com SQL e pandas.
+- Criar análises em notebooks Jupyter e gráficos para explicar os resultados.
+- Automatizar coletas de dados com scripts agendados.
+- Apresentar os resultados para as áreas de negócio.
+
+Requisitos:
+- Python e pandas
+- SQL e PostgreSQL
+- Jupyter
+- Visualização de dados
+- Boa comunicação
+
+Diferenciais: Power BI, Apache Spark, Excel avançado.

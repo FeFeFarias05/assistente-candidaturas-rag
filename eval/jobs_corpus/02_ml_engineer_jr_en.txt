@@ -1,0 +1,18 @@
+Junior Machine Learning Engineer | Example AI Co. (fictional)
+
+Join our team to train, evaluate and ship small machine learning models.
+
+What you will do:
+- Train classification models and compare them with cross-validation.
+- Measure precision and recall and report the results clearly to the team.
+- Prepare datasets with pandas and SQL.
+- Package models for deployment.
+
+Requirements:
+- Python and scikit-learn
+- pandas and SQL
+- Understanding of model evaluation metrics
+- TensorFlow or PyTorch
+- Docker
+- Experience with AWS
+- Fluent English

@@ -1,0 +1,19 @@
+Desenvolvedor(a) Backend Python | Plataforma Fictícia
+
+Time de plataforma responsável pelas APIs de um produto de pagamentos.
+
+Responsabilidades:
+- Desenvolver e manter APIs REST em Python.
+- Escrever testes automatizados e acompanhar a cobertura.
+- Modelar tabelas e otimizar consultas SQL.
+- Tratar erros e escrever logs que ajudem na depuração.
+- Configurar pipelines de integração contínua.
+
+Requisitos:
+- Python com Flask ou FastAPI
+- pytest
+- PostgreSQL e SQLAlchemy
+- GitHub Actions
+- Docker
+
+Diferencial: Kubernetes.
