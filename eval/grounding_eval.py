@@ -100,9 +100,37 @@ def aggregate(rows: list[dict]) -> dict:
 
 
 def _rates(sel: list[dict]) -> dict:
-    c = Counter(r["label"] for r in sel)
-    n = len(sel) or 1
-    return {lab: c[lab] / n for lab in LABELS} | {"uncited": sum(1 for r in sel if not r["cited"]) / n}
+    """Taxas sobre as afirmações CITADAS. Sem citação é uma categoria à parte: no rascunho, a maioria é cortesia
+    ("Fico à disposição para conversar"), e tratá-la como afirmação falsa distorceria a comparação."""
+    cited = [r for r in sel if r["label"] != "UNCITED"]
+    n = len(cited) or 1
+    c = Counter(r["label"] for r in cited)
+    return {lab: c[lab] / n for lab in LABELS} | {"uncited": (len(sel) - len(cited)) / (len(sel) or 1), "n_cited": len(cited)}
+
+
+def normalize(rows: list[dict]) -> list[dict]:
+    """Linha sem citação nunca foi ao juiz: vira UNCITED (também em resultados guardados por versões antigas)."""
+    return [dict(r, label="UNCITED", reason="sem citação") if not r["cited"] else r for r in rows]
+
+
+def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """Intervalo de confiança de 95% para uma proporção k/n (Wilson: melhor que a normal em amostras pequenas)."""
+    if n == 0:
+        return float("nan"), float("nan")
+    p = k / n
+    d = 1 + z * z / n
+    centro = (p + z * z / (2 * n)) / d
+    meia = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / d
+    return centro - meia, centro + meia
+
+
+def diff_ci(a: list[bool], b: list[bool], reps: int = 2000, seed: int = 7) -> tuple[float, float, float]:
+    """Diferença de proporções (a menos b) com IC 95% por bootstrap; as amostras são independentes."""
+    import numpy as np
+    rng = np.random.default_rng(seed)
+    x, y = np.asarray(a, dtype=float), np.asarray(b, dtype=float)
+    d = x[rng.integers(0, len(x), (reps, len(x)))].mean(axis=1) - y[rng.integers(0, len(y), (reps, len(y)))].mean(axis=1)
+    return float(x.mean() - y.mean()), float(np.percentile(d, 2.5)), float(np.percentile(d, 97.5))
 
 
 def cohen_kappa(a: list[str], b: list[str]) -> float:
@@ -161,7 +189,7 @@ def generate(force: bool) -> None:
 
 
 def judge_report(claims: list[dict], model: str | None) -> list[dict]:
-    """Uma chamada por relatório. Afirmação sem citação não vai ao juiz: é UNSUPPORTED por definição."""
+    """Uma chamada por relatório. Afirmação sem citação não vai ao juiz: fica como UNCITED (sem o que julgar)."""
     todo = [(i, c) for i, c in enumerate(claims) if c["evidence"]]
     verdicts: dict[int, dict] = {}
     if todo:
@@ -170,7 +198,7 @@ def judge_report(claims: list[dict], model: str | None) -> list[dict]:
         verdicts = {v["id"]: v for v in res["verdicts"]}
     out = []
     for i, c in enumerate(claims):
-        v = verdicts.get(i) if c["evidence"] else {"label": "UNSUPPORTED", "reason": "sem citação"}
+        v = verdicts.get(i) if c["evidence"] else {"label": "UNCITED", "reason": "sem citação"}
         out.append(v or {"label": "UNSUPPORTED", "reason": "o juiz não devolveu veredito"})
     return out
 
@@ -200,23 +228,36 @@ def pct(x: float) -> str:
 
 
 def render(rows: list[dict], gen_model: str, judge_model: str, usage: str | None) -> str:
+    rows = normalize(rows)
     agg = aggregate(rows)
     names = {"rag": "RAG (só os trechos recuperados)", "full": "Material inteiro (sem busca)"}
+
+    def cell(rates, label, n):
+        k = round(rates[label] * n)
+        lo, hi = wilson(k, n)
+        return f"{pct(rates[label])} ({pct(lo)} a {pct(hi)})"
+
     L = ["# Avaliação de fundamentação (gerada por `eval/grounding_eval.py`)", "",
          f"Relatórios gerados com `{gen_model}`; afirmações julgadas por `{judge_model}`"
          + (" (**o mesmo modelo que escreveu: o juiz tende a aprovar o próprio texto**)" if gen_model == judge_model else "") + ". "
-         "Corpus fictício de 25 documentos; 6 vagas. Uma afirmação é um item de Pontos fortes, de O que destacar, ou uma linha do rascunho.", "",
-         "## Resultado", "", "| Modo | Afirmações | Sustentada | Parcial | Não sustentada | Sem citação |", "|---|---|---|---|---|---|"]
+         "Corpus fictício de 25 documentos; 6 vagas. Uma afirmação é um item de Pontos fortes, de O que destacar, ou uma linha do rascunho. "
+         "As taxas valem para as afirmações **com citação**; as sem citação aparecem à parte.", "",
+         "## Resultado", "", "| Modo | Citadas | Sustentada (IC 95%) | Parcial | Não sustentada | Linhas sem citação |", "|---|---|---|---|---|---|"]
     for mode, a in agg.items():
-        r = a["rates"]
-        L.append(f"| {names[mode]} | {a['n']} | {pct(r['SUPPORTED'])} | {pct(r['PARTIAL'])} | {pct(r['UNSUPPORTED'])} | {pct(r['uncited'])} |")
-    L += ["", "## Por seção", "", "| Modo | Seção | Afirmações | Sustentada | Parcial | Não sustentada |", "|---|---|---|---|---|---|"]
+        r, n = a["rates"], a["rates"]["n_cited"]
+        L.append(f"| {names[mode]} | {n} de {a['n']} | {cell(r, 'SUPPORTED', n)} | {cell(r, 'PARTIAL', n)} | {cell(r, 'UNSUPPORTED', n)} | {pct(r['uncited'])} |")
+    flags = {m: [r["label"] == "SUPPORTED" for r in rows if r["mode"] == m and r["label"] != "UNCITED"] for m in agg}
+    if "rag" in flags and "full" in flags and flags["rag"] and flags["full"]:
+        d, lo, hi = diff_ci(flags["rag"], flags["full"])
+        L += ["", f"Diferença na taxa sustentada, RAG menos material inteiro: **{100 * d:+.0f} pp** (IC 95%: {100 * lo:+.0f} a {100 * hi:+.0f}). "
+              + ("O intervalo inclui zero: inconclusivo." if lo <= 0 <= hi else "O intervalo exclui zero.")]
+    L += ["", "## Por seção", "", "| Modo | Seção | Citadas | Sustentada | Parcial | Não sustentada | Sem citação |", "|---|---|---|---|---|---|---|"]
     for mode, a in agg.items():
-        for s, v in a["sections"].items():
+        for sec, v in a["sections"].items():
             if v["n"]:
                 r = v["rates"]
-                L.append(f"| {mode} | {s} | {v['n']} | {pct(r['SUPPORTED'])} | {pct(r['PARTIAL'])} | {pct(r['UNSUPPORTED'])} |")
-    checked = [r for r in rows if r["literal_ok"] is not None]
+                L.append(f"| {mode} | {sec} | {r['n_cited']} de {v['n']} | {pct(r['SUPPORTED'])} | {pct(r['PARTIAL'])} | {pct(r['UNSUPPORTED'])} | {pct(r['uncited'])} |")
+    checked = [r for r in rows if r["literal_ok"] is not None and r["label"] != "UNCITED"]
     if checked:
         agree = sum((r["label"] != "UNSUPPORTED") == r["literal_ok"] for r in checked)
         L += ["", "## Checagem cruzada com a regra determinística", "",
@@ -225,9 +266,11 @@ def render(rows: list[dict], gen_model: str, judge_model: str, usage: str | None
               f"(juiz aprovou sem o termo na evidência: {sum(r['label'] != 'UNSUPPORTED' and not r['literal_ok'] for r in checked)}; "
               f"juiz reprovou com o termo presente: {sum(r['label'] == 'UNSUPPORTED' and r['literal_ok'] for r in checked)})."]
     bad = [r for r in rows if r["label"] == "UNSUPPORTED"][:10]
-    if bad:
-        L += ["", "## Exemplos de afirmações não sustentadas", ""]
-        L += [f"- ({r['mode']}, {r['job']}) {r['claim'][:150]}: _{r['reason']}_" for r in bad]
+    L += ["", "## Afirmações não sustentadas", ""]
+    L += [f"- ({r['mode']}, {r['job']}) {r['claim'][:150]}: _{r['reason']}_" for r in bad] or ["Nenhuma afirmação com citação foi considerada não sustentada."]
+    parc = [r for r in rows if r["label"] == "PARTIAL"][:6]
+    if parc:
+        L += ["", "## Exemplos de afirmações parciais", ""] + [f"- ({r['mode']}, {r['job']}) {r['claim'][:140]}: _{r['reason']}_" for r in parc]
     if usage:
         L += ["", f"Consumo da API nesta execução: {usage}."]
     return "\n".join(L) + "\n"
@@ -237,6 +280,7 @@ def render(rows: list[dict], gen_model: str, judge_model: str, usage: str | None
 
 def write_sample(rows: list[dict], n: int) -> None:
     rng = random.Random(7)
+    rows = [r for r in normalize(rows) if r["label"] != "UNCITED"]  # sem citação não há o que rotular
     half = [r for r in rows if r["mode"] == "rag"], [r for r in rows if r["mode"] == "full"]
     pick = [r for group in half for r in rng.sample(group, min(n // 2, len(group)))]
     rng.shuffle(pick)
@@ -267,6 +311,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--judge-model", help="modelo do juiz (use um diferente do gerador)")
     ap.add_argument("--force", action="store_true", help="refaz os relatórios")
+    ap.add_argument("--render-only", action="store_true", help="refaz results_grounding.md a partir de rows.json, sem chamar a API")
     ap.add_argument("--sample", type=int, help="escreve uma amostra de N afirmações para rotular à mão")
     ap.add_argument("--agreement", type=Path, help="planilha da amostra com a sua última coluna preenchida")
     args = ap.parse_args()
@@ -275,6 +320,11 @@ def main():
     if args.sample:
         return write_sample(json.loads((OUT / "rows.json").read_text(encoding="utf-8")), args.sample)
     from jobassist.config import load_config
+    if args.render_only:
+        rows = json.loads((OUT / "rows.json").read_text(encoding="utf-8"))
+        text = render(rows, load_config().model, args.judge_model or "gpt-5.5", None)
+        (HERE / "results_grounding.md").write_text(text, encoding="utf-8")
+        return print(text)
     llm.reset_usage()
     generate(args.force)
     judge_model = args.judge_model or load_config().model

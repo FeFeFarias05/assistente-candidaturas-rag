@@ -68,12 +68,19 @@ def row(mode, label, section="Pontos fortes", cited=("a#c1",)):
     return {"mode": mode, "label": label, "section": section, "cited": list(cited)}
 
 
+def row_sem_citacao(mode):
+    return {"mode": mode, "label": "UNSUPPORTED", "section": "Rascunho de mensagem", "cited": [], "claim": "Fico à disposição.",
+            "job": "j", "reason": "x", "literal_ok": None}
+
+
 def test_aggregate_calcula_taxas_por_modo_e_secao():
-    rows = [row("rag", "SUPPORTED"), row("rag", "SUPPORTED"), row("rag", "PARTIAL"), row("rag", "UNSUPPORTED", cited=()),
-            row("full", "SUPPORTED", "Rascunho de mensagem")]
+    rows = ge.normalize([row("rag", "SUPPORTED"), row("rag", "SUPPORTED"), row("rag", "PARTIAL"), row("rag", "UNSUPPORTED", cited=()),
+                         row("full", "SUPPORTED", "Rascunho de mensagem")])
     agg = ge.aggregate(rows)
     r = agg["rag"]["rates"]
-    assert agg["rag"]["n"] == 4 and r["SUPPORTED"] == 0.5 and r["PARTIAL"] == 0.25 and r["UNSUPPORTED"] == 0.25 and r["uncited"] == 0.25
+    # a linha sem citação sai da taxa (3 citadas: 2 sustentadas, 1 parcial) e aparece à parte
+    assert agg["rag"]["n"] == 4 and r["n_cited"] == 3 and r["SUPPORTED"] == pytest.approx(2 / 3)
+    assert r["PARTIAL"] == pytest.approx(1 / 3) and r["UNSUPPORTED"] == 0 and r["uncited"] == 0.25
     assert agg["full"]["sections"]["Rascunho de mensagem"]["rates"]["SUPPORTED"] == 1.0
     assert agg["full"]["sections"]["Pontos fortes"]["n"] == 0
 
@@ -102,7 +109,7 @@ def test_afirmacao_sem_citacao_nao_vai_ao_juiz_e_e_reprovada(monkeypatch):
                         chamadas.append((prompt, model)) or {"verdicts": [{"id": 1, "label": "SUPPORTED", "reason": "ok"}]})
     claims = [{"text": "sem fonte", "evidence": ""}, {"text": "com fonte", "evidence": "[a#c1]\ntexto"}]
     out = ge.judge_report(claims, "gpt-juiz")
-    assert out[0] == {"label": "UNSUPPORTED", "reason": "sem citação"} and out[1]["label"] == "SUPPORTED"
+    assert out[0] == {"label": "UNCITED", "reason": "sem citação"} and out[1]["label"] == "SUPPORTED"
     assert len(chamadas) == 1 and chamadas[0][1] == "gpt-juiz" and "sem fonte" not in chamadas[0][0]
 
 
@@ -114,10 +121,33 @@ def test_veredito_ausente_vira_nao_sustentada(monkeypatch):
 
 def test_sem_nenhuma_afirmacao_citada_nao_chama_o_juiz(monkeypatch):
     monkeypatch.setattr(ge.llm, "complete", lambda *a, **k: pytest.fail("não deveria gastar API"))
-    assert ge.judge_report([{"text": "x" * 20, "evidence": ""}], None)[0]["label"] == "UNSUPPORTED"
+    assert ge.judge_report([{"text": "x" * 20, "evidence": ""}], None)[0]["label"] == "UNCITED"
 
 
 def test_render_avisa_quando_o_juiz_e_o_proprio_gerador():
     rows = [{**row("rag", "SUPPORTED"), "job": "j", "claim": "c", "reason": "r", "literal_ok": None}]
     assert "o mesmo modelo que escreveu" in ge.render(rows, "m1", "m1", None)
     assert "o mesmo modelo que escreveu" not in ge.render(rows, "m1", "m2", None)
+
+
+# ---------- cortesia sem citação não conta como afirmação falsa ----------
+
+def test_cortesia_sem_citacao_nao_vira_nao_sustentada_no_relatorio():
+    rows = [{**row("rag", "SUPPORTED"), "job": "j", "claim": "c", "reason": "r", "literal_ok": None}, row_sem_citacao("rag")]
+    texto = ge.render(rows, "m1", "m2", None)
+    assert "Nenhuma afirmação com citação foi considerada não sustentada" in texto
+    assert "1 de 2" in texto  # uma citada, de duas linhas
+
+
+def test_wilson_e_razoavel():
+    lo, hi = ge.wilson(80, 100)
+    assert 0.70 < lo < 0.80 < hi < 0.88
+    assert ge.wilson(0, 10)[0] == pytest.approx(0.0, abs=1e-9) and ge.wilson(10, 10)[1] == pytest.approx(1.0, abs=1e-9)
+    assert math.isnan(ge.wilson(0, 0)[0])
+
+
+def test_diferenca_de_proporcoes():
+    d, lo, hi = ge.diff_ci([True] * 80 + [False] * 20, [True] * 40 + [False] * 60)
+    assert d == pytest.approx(0.4) and lo > 0
+    d, lo, hi = ge.diff_ci([True] * 8 + [False] * 2, [True] * 8 + [False] * 2)
+    assert d == 0.0 and lo < 0 < hi  # iguais: o intervalo inclui zero
