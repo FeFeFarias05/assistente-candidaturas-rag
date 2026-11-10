@@ -8,7 +8,8 @@ Relevância é por TEXTO: um trecho é relevante para uma consulta se contém al
   bm25        só palavras-chave (BM25 implementado aqui, sem dependências)
   sistema     o que o jobassist faz hoje: semântica + bônus de termo literal/idioma
   rrf         fusão por posição (Reciprocal Rank Fusion) de dense + bm25
-  dense_openai (opcional, --openai) embeddings da OpenAI em vez dos locais
+  dense_openai / sistema_openai / rrf_openai (opcional, --openai): embeddings da OpenAI
+  dense_mpnet / sistema_mpnet (opcional, --mpnet): modelo local maior (~1 GB), para ver se fecha a diferença
 """
 import argparse
 import contextlib
@@ -18,6 +19,7 @@ import re
 import sys
 import unicodedata
 from collections import Counter
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -63,6 +65,32 @@ def relevant_set(chunks: list, query) -> set[int]:
         return set()
     pats = [term_pattern(e) for e in query.evidence]
     return {i for i, c in enumerate(chunks) if any(p.search(c.text) for p in pats)}
+
+
+@contextlib.contextmanager
+def embedder(fn):
+    """Troca o modelo de embeddings usado pelo retrieve() do projeto (só dentro do bloco)."""
+    saved = rt.embed
+    rt.embed = fn
+    try:
+        yield
+    finally:
+        rt.embed = saved
+
+
+MPNET = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
+
+
+@lru_cache(maxsize=1)
+def _mpnet():
+    from fastembed import TextEmbedding
+    from jobassist.embed import CACHE
+    return TextEmbedding(MPNET, cache_dir=str(CACHE))
+
+
+def mpnet_embed(texts, kind="passage"):
+    vecs = np.array(list(_mpnet().embed(list(texts))), dtype=np.float32)
+    return vecs / np.linalg.norm(vecs, axis=1, keepdims=True)
 
 
 # ---------- estratégias: cada uma devolve, por consulta, [(índice do trecho, nota)] em ordem ----------
@@ -160,12 +188,25 @@ def bootstrap_ci(values: list[float], reps: int = 2000, seed: int = SEED) -> tup
     return float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))
 
 
+def paired_diff(a: list[float], b: list[float], reps: int = 2000, seed: int = SEED) -> tuple[float, float, float]:
+    """Diferença média a-b, consulta a consulta, com IC 95% por bootstrap. Se o IC exclui 0, a diferença é real."""
+    d = np.asarray(a) - np.asarray(b)
+    rng = np.random.default_rng(seed)
+    means = d[rng.integers(0, len(d), (reps, len(d)))].mean(axis=1)
+    return float(d.mean()), float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))
+
+
+PAIRS = [("sistema", "dense"), ("sistema", "bm25"), ("rrf", "sistema"), ("sistema_mpnet", "sistema"),
+         ("sistema_openai", "sistema"), ("sistema_openai", "sistema_mpnet")]
+
+
 def summarize(rankings, queries, rels) -> dict:
     rows = per_query(rankings, queries, rels)
     top1 = lambda sel: [r[0][1] if r else 0.0 for r, q in zip(rankings, queries) if sel(q)]
     pos, neg = top1(lambda q: q.category != "absent"), top1(lambda q: q.category == "absent")
     t90 = float(np.percentile(pos, 10))  # limiar que mantém 90% das consultas com evidência
     out = {m: float(np.mean(v)) for m, v in rows.items() if m != "kind"}
+    out["_hit3"], out["_mrr"] = rows["hit@3"], rows["mrr"]  # por consulta, para as comparações pareadas
     out["hit@3_ci"] = bootstrap_ci(rows["hit@3"])
     out["mrr_ci"] = bootstrap_ci(rows["mrr"])
     out["auc"] = auc(pos, neg)
@@ -179,7 +220,7 @@ def summarize(rankings, queries, rels) -> dict:
 
 # ---------- execução ----------
 
-def run_all(include_openai: bool = False) -> dict:
+def run_all(include_openai: bool = False, include_mpnet: bool = False) -> dict:
     chunks = load_chunks()
     texts = [c.text for c in chunks]
     rels = [relevant_set(chunks, q) for q in QUERIES]
@@ -187,10 +228,18 @@ def run_all(include_openai: bool = False) -> dict:
     dense = rank_system(QUERIES, chunks, vecs, dense_only=True)
     bm25 = rank_bm25(QUERIES, chunks)
     strategies = {"dense": dense, "bm25": bm25, "sistema": rank_system(QUERIES, chunks, vecs), "rrf": rank_rrf(dense, bm25)}
+    if include_mpnet:
+        with embedder(mpnet_embed):
+            mv = mpnet_embed(texts)
+            strategies["dense_mpnet"] = rank_system(QUERIES, chunks, mv, dense_only=True)
+            strategies["sistema_mpnet"] = rank_system(QUERIES, chunks, mv)
     if include_openai:
-        os.environ["EMBEDDINGS"] = "openai"
+        os.environ["EMBEDDINGS"] = "openai"  # o embed() do projeto passa a usar a API (só neste bloco)
         try:
-            strategies["dense_openai"] = rank_system(QUERIES, chunks, embed(texts, "passage"), dense_only=True)
+            ov = embed(texts, "passage")
+            strategies["dense_openai"] = rank_system(QUERIES, chunks, ov, dense_only=True)
+            strategies["sistema_openai"] = rank_system(QUERIES, chunks, ov)
+            strategies["rrf_openai"] = rank_rrf(strategies["dense_openai"], bm25)
         finally:
             os.environ["EMBEDDINGS"] = "local"
     result = {"n_chunks": len(chunks), "n_docs": len({c.source for c in chunks}), "n_queries": len(QUERIES),
@@ -227,6 +276,14 @@ def render(res: dict) -> str:
         L.append(f"| {name} | {pct(m['hit@1'])} | {pct(m['hit@3'])} ({ci(m['hit@3_ci'])}) | {pct(m['hit@5'])} | "
                  f"{pct(m['p@3'])} | {pct(m['r@3'])} | {m['mrr']:.2f} ({m['mrr_ci'][0]:.2f}–{m['mrr_ci'][1]:.2f}) | "
                  f"{m['auc']:.2f} | {pct(m['abstencao_90'])} |")
+    L += ["", "## Comparações pareadas (consulta a consulta)", "",
+          "| A contra B | ΔHit@3 (IC 95%) | ΔMRR (IC 95%) | Conclusão |", "|---|---|---|---|"]
+    for a, b in PAIRS:
+        if a in s and b in s:
+            (h, hl, hh), (m, ml, mh) = paired_diff(s[a]["_hit3"], s[b]["_hit3"]), paired_diff(s[a]["_mrr"], s[b]["_mrr"])
+            verdict = ("A melhor" if hl > 0 or ml > 0 else "A pior" if hh < 0 or mh < 0 else "inconclusivo")
+            L.append(f"| {a} contra {b} | {100 * h:+.0f} pp ({100 * hl:+.0f} a {100 * hh:+.0f}) | "
+                     f"{m:+.2f} ({ml:+.2f} a {mh:+.2f}) | {verdict} |")
     L += ["", "## Hit@3 por tipo de requisito", "", "| Estratégia | Tecnologias | Responsabilidades e outros |", "|---|---|---|"]
     L += [f"| {n} | {pct(m['hit@3_tech'])} | {pct(m['hit@3_outro'])} |" for n, m in s.items()]
     L += ["", "## Tamanho do trecho (caracteres)", "",
@@ -241,16 +298,18 @@ def render(res: dict) -> str:
           "- **AUC**: chance de a nota do melhor trecho de uma consulta COM evidência superar a de uma consulta SEM. "
           "0,5 = não separa; 1,0 = separa perfeitamente. Mede se dá para escolher um limiar de \"sem evidência\".",
           "- **Abstenção a 90%**: com o limiar que mantém 90% das consultas com evidência, quantas das sem evidência ficam de fora.",
-          "- IC 95%: bootstrap sobre as consultas (2000 reamostragens). Diferenças dentro do intervalo não são conclusivas.", ""]
+          "- IC 95%: bootstrap sobre as consultas (2000 reamostragens). Comparar dois ICs lado a lado é conservador demais: "
+          "por isso as comparações pareadas olham a diferença consulta a consulta. \"inconclusivo\" = o IC da diferença inclui zero.", ""]
     return "\n".join(L)
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--openai", action="store_true", help="inclui embeddings da OpenAI (gasta API, centavos)")
+    ap.add_argument("--mpnet", action="store_true", help="inclui um modelo local maior (baixa ~1 GB na primeira vez)")
     ap.add_argument("--out", type=Path, default=HERE / "results_retrieval.md")
     args = ap.parse_args()
-    res = run_all(args.openai)
+    res = run_all(args.openai, args.mpnet)
     args.out.write_text(render(res), encoding="utf-8")
     print(render(res))
     from jobassist import llm

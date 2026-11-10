@@ -94,3 +94,17 @@ def test_rrf_favorece_o_que_aparece_bem_nas_duas_listas():
     b = [[(3, 5.0), (1, 4.0), (9, 3.0)]]
     fused = ev.rank_rrf(a, b)[0]
     assert [i for i, _ in fused][:2] == [1, 3]  # 1 e 3 estão nas duas
+
+
+# ---------- comparação pareada ----------
+
+def test_diferenca_pareada_detecta_melhora_real_e_ruido():
+    a = [1.0] * 40 + [0.0] * 10           # A acerta 40 de 50
+    b = [1.0] * 20 + [0.0] * 30           # B acerta 20 de 50, nas mesmas consultas
+    d, lo, hi = ev.paired_diff(a, b)
+    assert d == pytest.approx(0.4) and lo > 0  # IC exclui zero: melhora real
+    iguais = [1.0, 0.0] * 25
+    d, lo, hi = ev.paired_diff(iguais, iguais)
+    assert d == 0.0 and lo == 0.0 and hi == 0.0
+    ruido = ev.paired_diff([1.0, 0.0, 1.0, 0.0] * 5, [0.0, 1.0, 1.0, 0.0] * 5)
+    assert ruido[1] <= 0 <= ruido[2]  # trocam acertos entre si: inconclusivo
