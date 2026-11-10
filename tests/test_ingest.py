@@ -87,3 +87,43 @@ def test_indice_novo_nao_avisa_nada(setup, capsys):
     mat, db, _ = setup
     ing.ingest(mat, db)
     assert "refazendo" not in capsys.readouterr().err
+
+
+# ---------- cache do índice em memória ----------
+
+def test_load_index_reaproveita_a_leitura_enquanto_o_arquivo_nao_muda(setup):
+    mat, db, _ = setup
+    ing.ingest(mat, db)
+    a, b = ing.load_index(db), ing.load_index(db)
+    assert a is b  # mesma leitura, sem ir ao SQLite de novo
+    assert ing.load_index(db, use_cache=False) is not a  # mas dá para forçar a leitura a frio
+
+
+def test_load_index_percebe_que_o_arquivo_mudou(setup):
+    mat, db, _ = setup
+    ing.ingest(mat, db)
+    antes = ing.load_index(db)
+    (mat / "c.md").write_text("Texto novo do arquivo C.", encoding="utf-8")
+    ing.ingest(mat, db)
+    depois = ing.load_index(db)
+    assert depois is not antes and "c.md#c1" in depois[0] and "c.md#c1" not in antes[0]
+
+
+def test_load_index_nao_serve_cache_de_arquivo_apagado_ou_vazio(setup, tmp_path):
+    mat, db, _ = setup
+    ing.ingest(mat, db)
+    assert ing.load_index(db) is not None
+    db.unlink()
+    assert ing.load_index(db) is None
+    vazio = tmp_path / "vazio.db"
+    ing.ingest(tmp_path / "nada", vazio) if False else None  # índice sem nenhum trecho
+    import sqlite3
+    sqlite3.connect(vazio).executescript(ing.SCHEMA)
+    assert ing.load_index(vazio) is None
+
+
+def test_matriz_carregada_tem_o_formato_e_os_valores_certos(setup):
+    mat, db, _ = setup
+    ing.ingest(mat, db)
+    ids, texts, m = ing.load_index(db, use_cache=False)
+    assert m.shape == (len(ids), 2) and m.dtype == np.float32 and np.allclose(m, [[1.0, 0.0]] * len(ids))
