@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from .material import Segment
 
 # O modelo de embeddings local lê ~128 tokens: chunks curtos evitam truncar.
+CHUNKER_VERSION = 2  # muda quando a divisão em trechos muda: o índice antigo é refeito sozinho
 MAX_CHARS = 450
 OVERLAP = 60
 
@@ -13,6 +14,10 @@ class Chunk:
     id: str  # "curriculo.pdf#p1c3" ou "projeto.md#c2"
     source: str  # arquivo
     text: str
+
+
+def _is_heading(line: str) -> bool:
+    return line.lstrip().startswith("#")
 
 
 def _units(text: str) -> list[str]:
@@ -39,11 +44,18 @@ def chunk_segment(seg: Segment) -> list[Chunk]:
     base = seg.id if "#" in seg.id else seg.id + "#"
     pieces, cur = [], ""
     for u in _units(seg.text):
-        if cur and len(cur) + 1 + len(u) > MAX_CHARS:
-            pieces.append(cur)
-            # sobreposição: repete a última unidade se for curta
-            last = cur.split("\n")[-1]
-            cur = last if len(last) <= OVERLAP else ""
+        # Título nunca fica sozinho nem no fim de um trecho: ele acompanha o texto que vem depois
+        # (título solto ganhava nota alta na busca só por dividir palavras com a consulta).
+        only_headings = cur and all(_is_heading(l) for l in cur.split("\n"))
+        if cur and not only_headings and len(cur) + 1 + len(u) > MAX_CHARS:
+            lines = cur.split("\n")
+            if len(lines) > 1 and _is_heading(lines[-1]):
+                pieces.append("\n".join(lines[:-1]))
+                cur = lines[-1]
+            else:
+                pieces.append(cur)
+                # sobreposição: repete a última unidade se for curta
+                cur = lines[-1] if len(lines[-1]) <= OVERLAP else ""
         cur = f"{cur}\n{u}".strip("\n")
     if cur:
         pieces.append(cur)
