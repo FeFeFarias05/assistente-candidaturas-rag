@@ -99,14 +99,32 @@ def chunk_counts(db_path: Path = INDEX_PATH) -> dict[str, int]:
         db.close()
 
 
-def load_index(db_path: Path = INDEX_PATH):
-    """Devolve (ids, textos, matriz de vetores) ou None se o índice não existe/está vazio."""
-    if not Path(db_path).exists():
+_CACHE: dict[str, tuple[tuple[int, int], tuple]] = {}
+
+
+def load_index(db_path: Path = INDEX_PATH, use_cache: bool = True):
+    """Devolve (ids, textos, matriz de vetores) ou None se o índice não existe/está vazio.
+
+    O resultado fica em memória e só é relido se o arquivo mudar (data de modificação ou tamanho): num servidor
+    que fica de pé, as análises seguintes não pagam a leitura do SQLite, que no benchmark de escala custava
+    mais que a própria busca. Quem chama não deve alterar os objetos devolvidos.
+    """
+    path = Path(db_path)
+    if not path.exists():
         return None
-    db = sqlite3.connect(db_path)
+    stat = path.stat()
+    stamp = (stat.st_mtime_ns, stat.st_size)
+    cached = _CACHE.get(str(path))
+    if use_cache and cached and cached[0] == stamp:
+        return cached[1]
+    db = sqlite3.connect(path)
     rows = db.execute("SELECT id, text, embedding FROM chunks ORDER BY id").fetchall()
     db.close()
     if not rows:
+        _CACHE.pop(str(path), None)
         return None
     ids, texts, blobs = zip(*rows)
-    return list(ids), list(texts), np.vstack([np.frombuffer(b, dtype=np.float32) for b in blobs])
+    matrix = np.frombuffer(b"".join(blobs), dtype=np.float32).reshape(len(blobs), -1)  # sem laço em Python
+    result = (list(ids), list(texts), matrix)
+    _CACHE[str(path)] = (stamp, result)
+    return result
