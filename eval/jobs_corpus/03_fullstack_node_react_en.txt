@@ -1,0 +1,20 @@
+Full Stack Developer (React and Node.js) | Remote Product Studio (fictional)
+
+We build web products for small businesses and work fully remotely.
+
+Responsibilities:
+- Build user interfaces with React and TypeScript.
+- Design and implement REST APIs with Node.js and Express.
+- Implement authentication with JWT and store data in MongoDB.
+- Add real-time features with WebSockets.
+- Work in Scrum sprints with designers and other developers.
+
+Requirements:
+- React and TypeScript
+- Node.js and Express
+- MongoDB
+- JWT authentication
+- CI/CD experience
+- Good English
+
+Nice to have: Next.js, GraphQL, Redux.

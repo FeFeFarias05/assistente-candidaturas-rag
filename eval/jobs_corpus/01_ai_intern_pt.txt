@@ -1,0 +1,20 @@
+Estagiário(a) em IA Generativa | Laboratório Fictício de Aplicações de IA
+
+Você vai ajudar o time a construir assistentes que respondem perguntas com base em documentos internos.
+
+Responsabilidades:
+- Construir pipelines RAG com Python: ingestão, divisão em trechos, embeddings e busca semântica.
+- Integrar APIs de LLMs (como a da OpenAI) para gerar respostas fundamentadas.
+- Avaliar a qualidade das respostas com conjuntos de perguntas e métricas.
+- Documentar os experimentos e os resultados.
+
+Requisitos:
+- Python
+- Experiência com APIs de LLM
+- Embeddings e busca semântica
+- Banco de dados vetorial (FAISS, Pinecone ou pgvector)
+- Git
+- Inglês avançado
+- Graduação em andamento em Computação ou áreas afins
+
+Diferenciais: LangChain, fine-tuning de modelos, Docker.

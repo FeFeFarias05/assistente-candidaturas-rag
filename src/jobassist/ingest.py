@@ -1,11 +1,12 @@
 """Material -> chunks -> embeddings -> index.db (incremental por hash do arquivo)."""
 import hashlib
 import sqlite3
+import sys
 from pathlib import Path
 
 import numpy as np
 
-from .chunking import chunk_all
+from .chunking import CHUNKER_VERSION, chunk_all
 from .embed import embed, provider_id
 from .material import load_material
 
@@ -39,6 +40,20 @@ def _check_provider(db: sqlite3.Connection, rebuild: bool) -> None:
     db.execute("INSERT OR REPLACE INTO meta VALUES ('provider', ?)", (current,))
 
 
+def _check_chunker(db: sqlite3.Connection) -> None:
+    """Se a divisão em trechos mudou, o índice antigo é refeito (os embeddings são derivados: nada se perde).
+
+    Índice criado antes desta checagem não tem a marca: conta como versão 1.
+    """
+    row = db.execute("SELECT value FROM meta WHERE key='chunker'").fetchone()
+    has_chunks = db.execute("SELECT 1 FROM chunks LIMIT 1").fetchone() is not None
+    old = row[0] if row else ("1" if has_chunks else None)
+    if old is not None and old != str(CHUNKER_VERSION):
+        print(f"[ingest] a divisão em trechos mudou (v{old} para v{CHUNKER_VERSION}): refazendo o índice", file=sys.stderr)
+        db.execute("DELETE FROM chunks")
+    db.execute("INSERT OR REPLACE INTO meta VALUES ('chunker', ?)", (str(CHUNKER_VERSION),))
+
+
 def file_hash(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -54,6 +69,7 @@ def ingest(folder: str | Path, db_path: Path = INDEX_PATH, rebuild: bool = False
     db = _connect(db_path)
     with db:
         _check_provider(db, rebuild)
+        _check_chunker(db)
         old = dict(db.execute("SELECT source, file_hash FROM chunks GROUP BY source"))
         gone = [s for s in old if s not in by_source]
         todo = [s for s in by_source if old.get(s) != hashes[s]]
@@ -83,14 +99,32 @@ def chunk_counts(db_path: Path = INDEX_PATH) -> dict[str, int]:
         db.close()
 
 
-def load_index(db_path: Path = INDEX_PATH):
-    """Devolve (ids, textos, matriz de vetores) ou None se o índice não existe/está vazio."""
-    if not Path(db_path).exists():
+_CACHE: dict[str, tuple[tuple[int, int], tuple]] = {}
+
+
+def load_index(db_path: Path = INDEX_PATH, use_cache: bool = True):
+    """Devolve (ids, textos, matriz de vetores) ou None se o índice não existe/está vazio.
+
+    O resultado fica em memória e só é relido se o arquivo mudar (data de modificação ou tamanho): num servidor
+    que fica de pé, as análises seguintes não pagam a leitura do SQLite, que no benchmark de escala custava
+    mais que a própria busca. Quem chama não deve alterar os objetos devolvidos.
+    """
+    path = Path(db_path)
+    if not path.exists():
         return None
-    db = sqlite3.connect(db_path)
+    stat = path.stat()
+    stamp = (stat.st_mtime_ns, stat.st_size)
+    cached = _CACHE.get(str(path))
+    if use_cache and cached and cached[0] == stamp:
+        return cached[1]
+    db = sqlite3.connect(path)
     rows = db.execute("SELECT id, text, embedding FROM chunks ORDER BY id").fetchall()
     db.close()
     if not rows:
+        _CACHE.pop(str(path), None)
         return None
     ids, texts, blobs = zip(*rows)
-    return list(ids), list(texts), np.vstack([np.frombuffer(b, dtype=np.float32) for b in blobs])
+    matrix = np.frombuffer(b"".join(blobs), dtype=np.float32).reshape(len(blobs), -1)  # sem laço em Python
+    result = (list(ids), list(texts), matrix)
+    _CACHE[str(path)] = (stamp, result)
+    return result

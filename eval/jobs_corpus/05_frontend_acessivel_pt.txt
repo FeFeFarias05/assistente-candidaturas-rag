@@ -1,0 +1,18 @@
+Desenvolvedor(a) Front-end Pleno | Produto Digital Fictício
+
+Você vai construir interfaces acessíveis e reutilizáveis para um produto usado por muita gente.
+
+Responsabilidades:
+- Implementar telas em React a partir de protótipos no Figma.
+- Criar e manter um design system com componentes reutilizáveis.
+- Garantir acessibilidade: teclado, contraste e leitores de tela.
+- Escrever testes de componentes.
+- Gerenciar o estado da aplicação.
+
+Requisitos:
+- HTML5, CSS3 e JavaScript
+- React e TypeScript
+- Figma
+- Acessibilidade web
+- Testes de componentes
+- Redux
