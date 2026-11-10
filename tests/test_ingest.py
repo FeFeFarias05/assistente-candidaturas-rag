@@ -61,3 +61,29 @@ def test_recusa_misturar_provedores(setup, monkeypatch):
     with pytest.raises(RuntimeError, match="--rebuild"):
         ing.ingest(mat, db)
     assert ing.ingest(mat, db, rebuild=True)["novos"] == 2
+
+
+def test_indice_antigo_sem_marca_do_chunker_e_refeito(setup, capsys):
+    import sqlite3
+    mat, db, calls = setup
+    ing.ingest(mat, db)
+    con = sqlite3.connect(db)
+    con.execute("DELETE FROM meta WHERE key='chunker'")  # simula um índice criado antes da marca existir
+    con.commit(); con.close()
+    assert ing.ingest(mat, db)["novos"] == 2  # tudo reindexado, mesmo com arquivos inalterados
+    assert "refazendo o índice" in capsys.readouterr().err and len(calls) == 2
+
+
+def test_mudanca_de_versao_do_chunker_refaz_o_indice(setup, monkeypatch, capsys):
+    mat, db, calls = setup
+    ing.ingest(mat, db)
+    assert ing.ingest(mat, db)["novos"] == 0  # mesma versão: incremental, nada a fazer
+    monkeypatch.setattr(ing, "CHUNKER_VERSION", 99)
+    assert ing.ingest(mat, db)["novos"] == 2 and "v2 para v99" in capsys.readouterr().err
+    assert ing.ingest(mat, db)["novos"] == 0  # e a nova versão fica registrada
+
+
+def test_indice_novo_nao_avisa_nada(setup, capsys):
+    mat, db, _ = setup
+    ing.ingest(mat, db)
+    assert "refazendo" not in capsys.readouterr().err
