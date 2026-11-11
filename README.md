@@ -61,18 +61,43 @@ flowchart LR
 
 ## Como rodar
 
-Requer Python 3.10+ e uma chave da API da OpenAI com crédito.
+Requer **Python 3.10+** e uma **chave da API da OpenAI com crédito**. Cada pessoa usa a própria chave e o próprio currículo: nada disso vem no repositório.
 
+### Passo a passo
+
+**1. Baixe e instale**
 ```bash
+git clone https://github.com/FeFeFarias05/assistente-candidaturas-rag.git
+cd assistente-candidaturas-rag
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt && pip install -e .
-cp .env.example .env        # preencha OPENAI_API_KEY (e confira OPENAI_MODEL)
-jobassist web --open        # interface web em http://127.0.0.1:8765
-# ou, no terminal:
-jobassist analyze eval/jobs/05_frontend_jr_pt.txt
 ```
 
-Na primeira execução o modelo de embeddings (~220 MB) é baixado para `.cache/`. O material padrão é o **fictício** de `data/sample/`.
+**2. Coloque a sua chave.** Crie uma chave em [platform.openai.com](https://platform.openai.com/api-keys) (a conta precisa de crédito) e rode:
+```bash
+cp .env.example .env
+```
+Abra o `.env` e preencha `OPENAI_API_KEY=` com a sua chave. O `.env` é ignorado pelo Git e a chave nunca sai da sua máquina, a não ser nas chamadas à OpenAI.
+
+**3. Experimente com o material fictício.** Por padrão (`MATERIAL_DIR=data/sample`) o sistema usa um currículo de exemplo, para você ver como funciona sem expor nada seu:
+```bash
+jobassist analyze eval/jobs/05_frontend_jr_pt.txt
+```
+Na primeira execução o modelo de embeddings (~220 MB) é baixado para `.cache/`.
+
+**4. Use o seu currículo.** Coloque o seu PDF (com texto selecionável), Word, PowerPoint, `.md` ou `.txt` em `data/private/` e troque no `.env`:
+```
+MATERIAL_DIR=data/private
+```
+Essa pasta é ignorada pelo Git. Quanto mais material (projetos, apresentações, respostas anteriores), melhores as análises.
+
+**5. Analise uma vaga.** Salve o texto da vaga em `data/vagas/` (também ignorada) e rode `jobassist analyze data/vagas/minha_vaga.txt`, ou abra a interface web:
+```bash
+jobassist web --open        # http://127.0.0.1:8765
+```
+Na web, cole a vaga na tela **Analisar**. A tela **Material** só permite adicionar ou remover arquivos quando `MATERIAL_DIR` aponta para a sua pasta, não para o exemplo.
+
+**O que isso custa e o que sai do seu computador:** cada análise chama a OpenAI com a sua chave e gasta crédito (o terminal mostra os tokens usados). Só o texto da vaga e no máximo 12 trechos de ~450 caracteres do seu material são enviados, e não o currículo inteiro; a busca dos trechos roda no seu computador. Detalhes nos parágrafos **Dados pessoais** e **Privacidade**, abaixo da tabela de comandos.
 
 | Comando | O que faz |
 |---|---|
