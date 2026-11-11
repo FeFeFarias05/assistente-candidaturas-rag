@@ -6,6 +6,8 @@ Você cola o texto de uma vaga. O sistema extrai os requisitos, busca no **seu**
 
 ![Tela de análise: pontos fortes e lacunas lado a lado, com etiquetas de citação](docs/img/interface-analisar.png)
 
+**Objetivo:** ser uma ferramenta para analisar se o meu currículo faz sentido para uma vaga e adaptá-lo. O sistema mostra o que o meu material já comprova, o que falta e o que vale destacar, sem inventar nada que eu não tenha feito.
+
 Projeto de portfólio feito com Spec-Driven Development ([especificação](docs/spec.md), [plano](docs/plan.md), [tarefas](docs/tasks.md)) e depois **avaliado com método**: quatro avaliações medem a busca, a fundamentação das respostas e a escala, e três delas apontaram defeitos reais que eu corrigi. Elas estão resumidas abaixo, **inclusive onde o resultado foi inconclusivo**.
 
 ## O problema e as regras
