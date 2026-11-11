@@ -288,7 +288,7 @@ def write_sample(rows: list[dict], n: int) -> None:
         w = csv.writer(f)
         w.writerow(["id", "afirmacao", "evidencia", "seu_rotulo (SUPPORTED, PARTIAL ou UNSUPPORTED)"])
         for i, r in enumerate(pick, 1):
-            w.writerow([i, r["claim"], r["evidence"][:1500].replace("\n", " "), ""])
+            w.writerow([i, r["claim"], r["evidence"].replace("\n", " "), ""])
     (OUT.parent / "grounding_amostra_juiz.json").write_text(json.dumps({str(i): r["label"] for i, r in enumerate(pick, 1)}), encoding="utf-8")
     print(f"amostra de {len(pick)} afirmações em {OUT.parent / 'grounding_amostra.csv'} (os rótulos do juiz ficam separados)")
 
