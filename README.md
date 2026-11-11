@@ -53,7 +53,7 @@ flowchart LR
 - Comparar dois intervalos de confiança lado a lado é conservador demais; o **bootstrap pareado** (consulta a consulta) separou "melhor" de "parece melhor".
 - A primeira versão do meu benchmark de escala dava recall de 0,33 do HNSW por defeito nos meus dados sintéticos (vizinhos quase empatados). Contei o erro no documento e mantive o pior caso como `--dificil`.
 - Minha métrica de fundamentação tratava cortesias do rascunho ("Fico à disposição") como afirmações falsas. Corrigi e escrevi o porquê.
-- O juiz de fundamentação é um LLM (`gpt-5.5`, outro modelo que o gerador). **Não foi validado por uma pessoa:** a amostra para isso está pronta, e até que seja rotulada os números significam "o que um segundo LLM achou".
+- O juiz de fundamentação é um LLM (`gpt-5.5`, outro modelo que o gerador). **Não foi validado por uma pessoa.** Conferi o juiz contra os rótulos de outro LLM (Claude) em 30 afirmações: 97% de concordância (kappa 0,78), com uma divergência. Isso reduz o risco, mas são dois LLMs; os números significam "o que LLMs acharam", não "o que uma pessoa achou". A amostra para rotular à mão continua disponível.
 
 **Limites das avaliações:** o corpus é **fictício**, gerado por LLM e escrito pela mesma pessoa que escreveu as consultas (viés de autor); medem se o sistema funciona, não se funciona bem no currículo de alguém. Com 64 consultas com evidência e ~110 afirmações por modo, os intervalos são largos.
 
